@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 이 저장소
 
-동네 카페 사장님이 쓰는 "골목카페 운영 대시보드". 정적 HTML 6개와 Supabase(DB + Edge Function 하나)로 이루어진다.
+동네 카페 사장님이 쓰는 "골목카페 운영 대시보드". 정적 HTML 6개와 Supabase(DB + Edge Function 두 개: 화면이 쓰는 `cafe-ai`, AI 도구가 쓰는 `cafe-mcp`)로 이루어진다.
 
 - [PRD.md](PRD.md) — 무엇을 만드는지. 화면, 데이터, AI 규격의 기준 문서다. 동작을 바꾸려면 PRD를 먼저 고친다.
 - [STEPS.md](STEPS.md) — 어떤 순서로 만들고 단계마다 무엇을 확인하는지. 어디까지 만들었는지는 이 문서 맨 위 표의 체크로 본다.
@@ -82,6 +82,18 @@ for f in *.html; do printf '%s  ' "$f"; sed -n '/공통 시작/,/공통 끝/p' "
 - 구글 지도를 끼워 넣는 이 주소는 구글이 공식 문서로 약속한 방식이 아니다. 지도가 안 뜨면 코드보다 이 주소가 막혔는지를 먼저 본다.
 - 근처 카페를 화면 안에 목록으로 찾아 주는 기능은 없다. 카카오와 구글 모두 키가 있어야 해서 뺐다(2026-10-11). 다시 넣자는 말이 나오면 키가 필요하다는 것부터 알린다.
 - 저장해 둔 카페(`rivals`)를 다른 지역으로 바꿀 때는 채팅에서 카카오맵 커넥터(PlayMCP)로 찾아 Supabase 커넥터로 넣는다. 이 커넥터는 Claude만 쓸 수 있고 웹 화면은 쓸 수 없다.
+
+## MCP 서버
+
+- Edge Function `cafe-mcp`는 Claude 같은 AI 도구가 가게 숫자를 읽어 가는 MCP 서버다(PRD 12장). 주소는 `https://ngyqprsdcajizpzoqxip.supabase.co/functions/v1/cafe-mcp`이고, 대시보드 화면은 이 서버를 쓰지 않는다.
+- 도구는 읽기만 두 개다: `today_summary`, `low_stock`. 도구를 늘릴 때도 읽기 도구만 넣는다. 데이터를 바꾸는 도구가 필요하다는 말이 나오면 로그인을 먼저 붙여야 한다고 알린다.
+- 코드는 `supabase/functions/cafe-mcp/index.ts`에 있고 Supabase 커넥터로 배포한다. 고치면 저장소의 파일과 배포된 코드를 같게 맞춘다. `verify_jwt`는 끈다(사용자가 정한 것).
+- Supabase 문서 "Deploy MCP servers"의 방법을 따랐다. 라이브러리는 `npm:@modelcontextprotocol/server@^2.0.0`이고 `createMcpHandler`로 만든다. 예전 이름인 `@modelcontextprotocol/sdk`의 예제와는 쓰는 법이 다르니, 고치기 전에 그 문서를 다시 본다.
+- 시험은 주소로 직접 불러서 한다. `Accept: application/json, text/event-stream` 머리말이 없으면 서버가 거절한다. 도구 이름과 요청 글이 모두 영어라서 Git Bash의 `curl -d`로 보내도 된다.
+
+```bash
+curl -s -X POST https://ngyqprsdcajizpzoqxip.supabase.co/functions/v1/cafe-mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"today_summary","arguments":{}}}'
+```
 
 ## 오늘 요약 보내기
 

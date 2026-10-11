@@ -23,6 +23,7 @@
 | 8 | GitHub에 올리기 | ☐ |
 | 9 | `rivals.html` — 주변 카페 | ☑ |
 | 10 | 오늘 요약 보내기 (왼쪽 메뉴 아래 버튼) | ☑ |
+| 11 | Edge Function `cafe-mcp` — MCP 서버 | ☑ |
 
 ---
 
@@ -298,3 +299,24 @@
 - [x] 창 너비를 760px 아래로 줄여도 버튼이 보이고, 창이 화면 밖으로 나가지 않는다.
 - [x] 공통 디자인 묶음이 여섯 파일에서 글자 하나 다르지 않다.
 - [x] HTML 파일과 저장소 어디에도 카카오 키가 없다. (키를 쓰지 않는다)
+
+---
+
+## 11단계 — Edge Function cafe-mcp: MCP 서버
+
+**만들 것**
+
+- AI 도구(Claude 등)가 가게 숫자를 읽어 가는 MCP 서버 `cafe-mcp` (PRD 12장). Supabase 문서 "Deploy MCP servers"의 로그인 없는 서버 방법대로 만든다.
+- 읽기 도구 두 개: `today_summary`(한국 시간 오늘 매출 · 주문 수 · 평균 별점), `low_stock`(재고 5개 이하 메뉴)
+- 로그인 확인(`verify_jwt`)은 끈다. 대시보드 화면은 바꾸지 않는다.
+
+**확인할 것**
+
+- [x] Supabase에 Edge Function `cafe-mcp`가 있고, 로그인 확인이 꺼져 있다.
+- [x] 서버에 인사(initialize)를 보내면 이름 `cafe-mcp`로 답한다.
+- [x] 도구 목록을 물으면 `today_summary`, `low_stock` 두 개만 나오고, 둘 다 읽기 전용으로 표시돼 있다.
+- [x] `today_summary`가 오늘 날짜(한국 시간)와 매출 · 주문 수 · 평균 별점을 돌려주고, 홈 카드의 숫자와 같다.
+- [x] `low_stock`이 재고 5개 이하 메뉴를 적게 남은 순서로 돌려주고, 홈의 재고 부족 메뉴 수와 같다.
+- [x] 저장소의 `supabase/functions/cafe-mcp/index.ts`와 배포된 코드가 같다.
+- [x] 코드와 저장소 어디에도 secret key가 없다. (화면과 같은 publishable key만 쓴다)
+- [ ] Claude 같은 AI 도구에 서버 주소를 커넥터로 추가하면 도구 두 개가 보이고 답이 나온다. (주소로 직접 불러 확인했고, AI 도구에 연결하는 것은 아직 해 보지 않음)
