@@ -52,10 +52,10 @@ button:disabled { cursor: default; opacity: .5; }
 .input::placeholder { color: var(--muted); }
 .input[aria-invalid="true"] { border-color: var(--bad); }
 .form-error { color: var(--bad); font-size: 13px; }
-.chip { padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 13px; }
+.chip { padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); font-size: 13px; }
 .chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
 .stepper { display: inline-flex; align-items: center; gap: 6px; }
-.step { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 17px; line-height: 1; }
+.step { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 17px; line-height: 1; }
 
 .badge { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; background: var(--bg); font-size: 13px; font-weight: 600; white-space: nowrap; }
 .badge::before { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); content: ""; }
@@ -106,6 +106,7 @@ button:disabled { cursor: default; opacity: .5; }
 .col-status { width: 120px; }
 .col-actions { width: 150px; }
 .stock-num { min-width: 3ch; font-variant-numeric: tabular-nums; text-align: center; }
+.is-editing .form-error:not(:empty) { margin-top: 8px; }
 
 /* 재고 5개 이하: 빨간색 */
 .is-low > * { background: color-mix(in srgb, var(--bad) 5%, var(--surface)); }
@@ -219,7 +220,6 @@ async function load() {
     db ??= supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     menus = await fetchAll(() => db.from('menus').select('id, name, category, price, stock'));
     sortMenus();
-    editingId = null;
     $('list').dataset.loaded = 'true';
     setState('ready');
     render();
@@ -269,7 +269,11 @@ function render() {
 
   const q = query.trim().toLowerCase();
   const shown = menus.filter(m => (category === '전체' || m.category === category) && m.name.toLowerCase().includes(q));
-  $('rows').replaceChildren(...shown.map(m => m.id === editingId ? editRow(m) : viewRow(m)));
+  // 고치는 중인 줄은 새로 만들지 않고 그대로 옮긴다. 다른 줄의 재고를 눌러 표를 다시 그려도 적던 글이 남는다
+  const editing = $('rows').querySelector('.is-editing');
+  const typing = editing?.contains(document.activeElement) ? document.activeElement : null;
+  $('rows').replaceChildren(...shown.map(m => m.id !== editingId ? viewRow(m) : Number(editing?.dataset.id) === m.id ? editing : editRow(m)));
+  if (typing?.isConnected) typing.focus();
   $('table-wrap').hidden = !shown.length;
   $('empty').hidden = shown.length > 0;
   $('empty').textContent = menus.length ? '조건에 맞는 메뉴가 없어요.' : '아직 메뉴가 없어요. 위에서 첫 메뉴를 추가해 보세요.';
@@ -365,9 +369,11 @@ $('add').addEventListener('submit', async e => {
 
 /* ───── 재고 − + ───── */
 const sending = new Set();
+const known = new Map(); // 메뉴마다, 데이터베이스에 들어 있다고 알고 있는 재고
 
 function bump(id, delta) {
   const m = menus.find(x => x.id === id);
+  if (!sending.has(id)) known.set(id, m.stock); // 보내는 중이 아니면 화면의 숫자가 곧 데이터베이스에서 받은 숫자다
   m.stock = Math.min(MAX_STOCK, Math.max(0, m.stock + delta));
   render(); // 줄 순서는 그대로 둔다. 누르는 도중에 줄이 움직이면 엉뚱한 메뉴를 누르게 된다
   focusButton(delta > 0 ? 'plus' : 'minus', id);
@@ -382,8 +388,15 @@ async function pushStock(m) {
     let sent;
     do {
       sent = m.stock;
-      const { error } = await db.from('menus').update({ stock: sent }).eq('id', m.id);
+      // 알고 있던 숫자일 때만 바꾼다. 그 사이 다른 화면에서 판매로 재고가 줄었는데 덮어쓰면 그만큼 재고가 다시 늘어난다
+      const { data, error } = await db.from('menus').update({ stock: sent }).eq('id', m.id).eq('stock', known.get(m.id)).select('id');
       if (error) throw error;
+      if (!data.length) {
+        toast('그 사이 다른 곳에서 재고가 바뀌었어요. 목록을 다시 불러올게요.', true);
+        load();
+        return;
+      }
+      known.set(m.id, sent);
     } while (m.stock !== sent);
   } catch (err) {
     console.error(err);
@@ -421,9 +434,14 @@ async function saveEdit(id) {
   const result = check({ name: inputs.name.value, category: inputs.category.value, price: inputs.price.value, stock: inputs.stock.value, stockBad: inputs.stock.validity.badInput }, id);
   if (!showCheck(result, inputs, errorEl)) return;
 
+  // 바꾼 칸만 보낸다. 가격만 고쳤는데 재고까지 보내면, 그 사이 다른 화면에서 판매로 줄어든 재고를 화면이 알던 숫자로 되돌린다
+  const m = menus.find(x => x.id === id);
+  const changed = Object.fromEntries(Object.entries(result.value).filter(([key, value]) => value !== m[key]));
+  if (!Object.keys(changed).length) return stopEdit(id);
+
   const buttons = tr.querySelectorAll('button');
   buttons.forEach(b => { b.disabled = true; });
-  const { data, error } = await db.from('menus').update(result.value).eq('id', id).select().single();
+  const { data, error } = await db.from('menus').update(changed).eq('id', id).select().single();
   if (error) {
     console.error(error);
     buttons.forEach(b => { b.disabled = false; });
@@ -431,7 +449,7 @@ async function saveEdit(id) {
     errorEl.hidden = false;
     return;
   }
-  Object.assign(menus.find(m => m.id === id), data);
+  Object.assign(m, data);
   sortMenus();
   stopEdit(id);
   toast(`${data.name} 메뉴를 고쳤어요.`);

@@ -52,10 +52,10 @@ button:disabled { cursor: default; opacity: .5; }
 .input::placeholder { color: var(--muted); }
 .input[aria-invalid="true"] { border-color: var(--bad); }
 .form-error { color: var(--bad); font-size: 13px; }
-.chip { padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 13px; }
+.chip { padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); font-size: 13px; }
 .chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
 .stepper { display: inline-flex; align-items: center; gap: 6px; }
-.step { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 17px; line-height: 1; }
+.step { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 17px; line-height: 1; }
 
 .badge { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; background: var(--bg); font-size: 13px; font-weight: 600; white-space: nowrap; }
 .badge::before { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); content: ""; }
@@ -92,7 +92,7 @@ button:disabled { cursor: default; opacity: .5; }
 .sell h2 { margin-bottom: 12px; }
 .sell-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(120px, auto) auto; align-items: end; gap: 12px 16px; }
 .qty { width: 72px; text-align: center; }
-.sell-amount { display: flex; align-items: center; min-height: 40px; color: var(--text); font-size: 20px; font-weight: 700; }
+.sell-amount { display: flex; align-items: center; min-height: 40px; color: var(--text); font-size: 22px; font-weight: 700; }
 .sell-hint { min-height: 1.5em; margin-top: 10px; color: var(--muted); font-size: 13px; }
 .sell .form-error { margin-top: 4px; }
 
@@ -100,7 +100,7 @@ button:disabled { cursor: default; opacity: .5; }
 .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
 
 /* 오늘 판매 목록 */
-.list h2 { margin-bottom: 8px; }
+.list h2 { margin-bottom: 12px; }
 .table { min-width: 700px; } /* 좁은 화면에서는 표만 옆으로 넘겨 본다. 메뉴 이름 칸이 찌그러지지 않게 넉넉히 둔다 */
 .table th[scope="row"] { font-weight: 600; }
 .table tfoot > tr > * { border-top: 2px solid var(--line); border-bottom: 0; font-weight: 700; }
@@ -132,7 +132,7 @@ button:disabled { cursor: default; opacity: .5; }
 
   <div class="notice" id="no-menus" hidden>
     <p>판매를 넣으려면 먼저 메뉴가 있어야 해요.</p>
-    <a class="btn btn-quiet" href="./#menu" target="_top">메뉴 추가하러 가기</a>
+    <a class="btn btn-quiet" href="index.html#menu" target="_top">메뉴 추가하러 가기</a>
   </div>
 
   <form class="card sell" id="sell" novalidate hidden>
@@ -246,7 +246,10 @@ function el(tag, attrs = {}, ...children) {
 }
 
 /* ───── 불러오기: 메뉴와 오늘 판매 기록 ───── */
+let loadTurn = 0;
+
 async function load() {
+  const turn = ++loadTurn;
   setState('loading');
   try {
     if (!window.supabase) throw new Error('Supabase 연결 도구를 불러오지 못했다');
@@ -257,6 +260,7 @@ async function load() {
       fetchAll(() => db.from('menus').select('id, name, category, price, stock')),
       fetchAll(() => db.from('sales').select('id, menu_id, qty, amount, sold_at').gte('sold_at', since)),
     ]);
+    if (turn !== loadTurn) return; // 기다리는 사이 더 새로 불러오기 시작했다. 늦게 온 옛 답으로 화면을 덮지 않는다
     menus = menuRows.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
     sales = saleRows.sort((a, b) => Date.parse(b.sold_at) - Date.parse(a.sold_at) || b.id - a.id); // 최근 판매가 위
     confirmId = null;
@@ -266,7 +270,7 @@ async function load() {
     render();
   } catch (err) {
     console.error(err);
-    setState('error');
+    if (turn === loadTurn) setState('error');
   }
 }
 
@@ -442,7 +446,7 @@ async function removeSale(id) {
   const m = menuOf(s.menu_id);
   busy = true;
   $('rows').querySelectorAll('button').forEach(b => { b.disabled = true; });
-  const { error } = await db.from('sales').delete().eq('id', id);
+  const { data, error } = await db.from('sales').delete().eq('id', id).select('id');
   busy = false;
   if (error) {
     console.error(error);
@@ -452,6 +456,7 @@ async function removeSale(id) {
     return;
   }
   await load();
+  if (!data.length) return toast('이미 지워진 기록이에요. 목록을 다시 불러왔어요.'); // 다른 창에서 먼저 지웠다
   toast(m?.stock != null ? `판매 기록을 지웠어요. ${m.name} 재고 ${count(s.qty)}개를 되돌렸어요.` : '판매 기록을 지웠어요.');
 }
 
