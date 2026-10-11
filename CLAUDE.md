@@ -23,6 +23,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npx serve .
 ```
 
+- Claude의 브라우저 창으로 볼 때는 `.claude/launch.json`의 `cafe-dashboard`(포트 5500)를 쓴다.
 - 이 PC에는 Node는 있고 Python은 없다.
 - `npx serve`는 화면을 띄우는 도구일 뿐이다. 프로젝트에 `package.json`이나 `node_modules`를 만들지 않는다.
 
