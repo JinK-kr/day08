@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 이 저장소
 
-동네 카페 사장님이 쓰는 "골목카페 운영 대시보드". 정적 HTML 6개와 Supabase(DB + Edge Function 둘)로 이루어진다.
+동네 카페 사장님이 쓰는 "골목카페 운영 대시보드". 정적 HTML 6개와 Supabase(DB + Edge Function 하나)로 이루어진다.
 
 - [PRD.md](PRD.md) — 무엇을 만드는지. 화면, 데이터, AI 규격의 기준 문서다. 동작을 바꾸려면 PRD를 먼저 고친다.
 - [STEPS.md](STEPS.md) — 어떤 순서로 만들고 단계마다 무엇을 확인하는지. 어디까지 만들었는지는 이 문서 맨 위 표의 체크로 본다.
@@ -40,7 +40,7 @@ for f in *.html; do printf '%s  ' "$f"; sed -n '/공통 시작/,/공통 끝/p' "
 - 페이지 하나는 HTML 파일 하나다. CSS와 JS를 같은 파일 안에 넣고, 공용 `.css` / `.js` 파일을 만들지 않는다. 각 페이지는 iframe 안에서도 혼자 열어도 동작해야 한다.
 - 그래서 공통 디자인 묶음(PRD 6장)이 각 파일 `<style>` 맨 위, `공통 시작` ~ `공통 끝` 주석 사이에 **똑같이 복사돼** 있다. 색 · 글꼴 값과 여러 페이지가 함께 쓰는 부품(`.card`, `.btn`, `.input`, `.chip`, `.badge`, `.notice`, `.table`, `.toast`)이 들어 있다. `index.html`이 원본이다. 한 글자라도 바꾸면 모든 페이지를 같이 바꾸고, 페이지에만 필요한 모양은 묶음 아래에 따로 적는다.
 - 페이지끼리 직접 값을 주고받지 않는다. 모든 페이지가 Supabase에서 다시 읽는다. (예: 리뷰에 답글을 저장하면 홈의 숫자는 홈을 다시 열 때 바뀐다.)
-- 바깥에서 불러오는 것은 supabase-js(CDN)와 Pretendard 글꼴(CDN) 두 가지뿐이다. 그래프는 라이브러리 없이 SVG로 직접 그린다. npm, 빌드 도구, 프레임워크를 들이지 않는다.
+- 바깥에서 불러오는 것은 supabase-js(CDN)와 Pretendard 글꼴(CDN) 두 가지뿐이다. 예외로 주변 카페 화면만 구글 지도를 iframe으로 끼워 넣는다. 그래프는 라이브러리 없이 SVG로 직접 그린다. npm, 빌드 도구, 프레임워크를 들이지 않는다.
 
 ## 데이터에서 틀리기 쉬운 것
 
@@ -76,13 +76,12 @@ for f in *.html; do printf '%s  ' "$f"; sed -n '/공통 시작/,/공통 끝/p' "
 - AI를 부르는 페이지에는 `askCafeAi(body)` 도우미가 같은 모양으로 들어 있다(`index.html`, `reviews.html`). 함수가 돌려준 `error` 글을 그대로 화면에 보여 준다.
 - 화면을 시험할 때는 `window.fetch`를 잠깐 바꿔 가짜 AI 답을 돌려주게 하면 AI 요청 수를 쓰지 않는다. 실제 AI 호출은 마지막에 한두 번만 한다.
 
-## 주변 카페 찾기
+## 주변 카페
 
-- 주변 카페 화면은 Edge Function `cafe-places`에 지역이나 역 이름을 보내 카카오맵의 카페 5곳을 받는다. AI가 아니라서 `cafe-ai`에 넣지 않고 따로 뒀다. 주고받는 모양은 PRD 9장 끝에 있다.
-- 코드는 `supabase/functions/cafe-places/index.ts`에 있고 `cafe-ai`와 같은 방법으로 배포한다(`verify_jwt`는 끈다).
-- 카카오 키는 Secrets의 `KAKAO_REST_API_KEY`에만 있고, 사용자가 카카오디벨로퍼스에서 발급해 직접 넣는다. 채팅으로 키를 받지 않는다. 그 앱의 [카카오맵] 사용 설정이 켜져 있어야 하고, 키에 "호출 허용 IP 주소"는 등록하지 않는다.
-- 키가 없으면 함수는 "주변 카페를 찾을 준비가 아직 끝나지 않았어요"(500)로 답한다. 코드 고장이 아니다. 화면을 시험할 때는 `window.fetch`를 잠깐 바꿔 가짜 답을 돌려주게 한다.
-- 채팅에서 쓰는 카카오맵 커넥터(PlayMCP)는 Claude만 쓸 수 있다. 웹 화면은 이 함수를 거쳐야 카카오맵을 찾을 수 있다.
+- 주변 카페 화면(`rivals.html`)은 키가 필요 없는 방법만 쓴다. 지역이나 역 이름을 넣으면 구글 지도를 iframe으로 끼워 넣고(`https://www.google.com/maps?output=embed&q=…`), 카페 찾기와 길찾기는 카카오맵 링크(`map.kakao.com/link/search/…`, `map.kakao.com/link/to/장소번호`)로 새 창을 연다.
+- 구글 지도를 끼워 넣는 이 주소는 구글이 공식 문서로 약속한 방식이 아니다. 지도가 안 뜨면 코드보다 이 주소가 막혔는지를 먼저 본다.
+- 근처 카페를 화면 안에 목록으로 찾아 주는 기능은 없다. 카카오와 구글 모두 키가 있어야 해서 뺐다(2026-10-11). 다시 넣자는 말이 나오면 키가 필요하다는 것부터 알린다.
+- 저장해 둔 카페(`rivals`)를 다른 지역으로 바꿀 때는 채팅에서 카카오맵 커넥터(PlayMCP)로 찾아 Supabase 커넥터로 넣는다. 이 커넥터는 Claude만 쓸 수 있고 웹 화면은 쓸 수 없다.
 
 ## 보안
 

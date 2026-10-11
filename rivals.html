@@ -87,22 +87,34 @@ button:disabled { cursor: default; opacity: .5; }
 @media (max-width: 760px) { .page { padding: 16px; } }
 /* ===== 공통 끝 ===== */
 
-/* 카페 찾기 */
+/* 지도 보기 (지역이나 역 이름 넣기) */
 .find { margin-bottom: 16px; }
 .find h2 { margin-bottom: 12px; }
 .find-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px 16px; }
 .find .form-error { margin-top: 10px; }
 
-/* 카페 목록 (저장해 둔 카페 · 방금 찾은 카페) */
+/* 지도 · 저장해 둔 카페: 카드 제목 줄 */
 .list-head { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; min-height: 33px; margin-bottom: 12px; }
 .list-head p { font-size: 13px; }
 .list-head .btn { margin-left: auto; }
-.table { min-width: 620px; } /* 좁은 화면에서는 표만 옆으로 넘겨 본다 */
-.table th[scope="row"] { font-weight: 600; }
-.col-link { width: 170px; }
-.list[data-busy] .table-wrap { opacity: .55; }
 
-@media (max-width: 760px) { .find-grid { grid-template-columns: minmax(0, 1fr); } }
+/* 지도 */
+.map { margin-bottom: 16px; }
+.map-box { position: relative; height: 360px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); overflow: hidden; }
+.map-box iframe { display: block; width: 100%; height: 100%; border: 0; }
+.map-wait { position: absolute; inset: 0; display: grid; place-items: center; background: var(--bg); color: var(--muted); }
+.map .notice { margin-bottom: 0; }
+
+/* 저장해 둔 카페 */
+.table { min-width: 720px; } /* 좁은 화면에서는 표만 옆으로 넘겨 본다 */
+.table th[scope="row"] { font-weight: 600; }
+.col-actions { width: 320px; }
+.is-shown > * { background: color-mix(in srgb, var(--accent) 6%, var(--surface)); } /* 지금 지도에 띄운 카페 */
+
+@media (max-width: 760px) {
+  .find-grid { grid-template-columns: minmax(0, 1fr); }
+  .map-box { height: 280px; }
+}
 </style>
 </head>
 <body class="page">
@@ -110,7 +122,7 @@ button:disabled { cursor: default; opacity: .5; }
 <div class="wrap">
   <header class="page-head">
     <h1>주변 카페</h1>
-    <p>지역이나 역 이름을 넣으면 카카오맵에서 근처 카페를 5곳까지 찾아 드려요</p>
+    <p>지역이나 역 이름을 넣으면 그 동네 지도를 보여 드려요</p>
   </header>
 
   <div class="notice is-error" id="notice" hidden>
@@ -119,21 +131,37 @@ button:disabled { cursor: default; opacity: .5; }
   </div>
 
   <form class="card find" id="find" novalidate>
-    <h2>카페 찾기</h2>
+    <h2>지도 보기</h2>
     <div class="find-grid">
       <label class="field">지역이나 역 이름
         <input class="input" id="place" maxlength="40" autocomplete="off" placeholder="예: 정발산역, 성수동">
       </label>
-      <button class="btn" id="submit">찾기</button>
+      <button class="btn" id="submit">지도 보기</button>
     </div>
     <p class="form-error" id="error" role="alert" hidden></p>
   </form>
 
+  <section class="card map" id="map-card">
+    <div class="list-head">
+      <h2 id="map-title">지도</h2>
+      <p class="muted" id="map-note"></p>
+      <a class="btn btn-quiet btn-small" id="map-search" target="_blank" rel="noopener" hidden>카카오맵에서 카페 찾기</a>
+    </div>
+    <div class="map-box" id="map-box" hidden>
+      <iframe id="map" title="지도" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <p class="map-wait" id="map-wait" hidden>지도를 불러오는 중…</p>
+    </div>
+    <div class="notice is-error" id="map-fail" hidden>
+      <p>지도를 불러오지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.</p>
+      <button type="button" class="btn btn-quiet" id="map-retry">다시 시도</button>
+    </div>
+    <p class="empty" id="map-empty">지역이나 역 이름을 넣거나, 아래 카페의 "지도 보기"를 누르면 여기에 지도가 떠요.</p>
+  </section>
+
   <section class="card list" id="list">
     <div class="list-head">
-      <h2 id="list-title">저장해 둔 카페</h2>
+      <h2>저장해 둔 카페</h2>
       <p class="muted" id="list-note"></p>
-      <button type="button" class="btn btn-quiet btn-small" id="back" hidden>저장해 둔 카페 보기</button>
     </div>
     <div class="table-wrap" id="table-wrap">
       <table class="table">
@@ -141,7 +169,7 @@ button:disabled { cursor: default; opacity: .5; }
           <tr>
             <th scope="col">이름</th>
             <th scope="col">주소</th>
-            <th scope="col" class="col-link" aria-label="카카오맵 링크"></th>
+            <th scope="col" class="col-actions" aria-label="지도와 카카오맵"></th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
@@ -156,8 +184,13 @@ button:disabled { cursor: default; opacity: .5; }
 /* Supabase 연결 — publishable key만 넣는다. */
 const SUPABASE_URL = 'https://ngyqprsdcajizpzoqxip.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_NwDpUc3O_dfJvOt9tA_Dhw_McmOYcMV';
-const PLACES_URL = `${SUPABASE_URL}/functions/v1/cafe-places`;
-const KAKAO_PLACE = /^https?:\/\/place\.map\.kakao\.com\/\d+$/; // 이 모양의 주소에만 링크를 건다
+
+/* 이 화면은 키가 필요 없는 주소만 쓴다 (PRD 5.6) */
+const GOOGLE_MAP = 'https://www.google.com/maps';                    // 구글 지도를 화면에 끼워 넣는 주소
+const KAKAO_SEARCH = 'https://map.kakao.com/link/search/';           // 카카오맵 검색 결과로 가는 링크
+const KAKAO_ROUTE = 'https://map.kakao.com/link/to/';                // 카카오맵 길찾기(도착지 = 장소 번호)로 가는 링크
+const KAKAO_PLACE = /^https?:\/\/place\.map\.kakao\.com\/(\d+)$/;    // 저장해 둔 카카오맵 링크의 모양. 괄호 안이 장소 번호
+const MAP_WAIT = 12000;                                              // 이만큼 기다려도 지도가 안 뜨면 실패로 본다
 
 const $ = id => document.getElementById(id);
 const count = n => n.toLocaleString('ko-KR');
@@ -165,8 +198,9 @@ const count = n => n.toLocaleString('ko-KR');
 let db;
 let saved = [];            // rivals 테이블에 저장해 둔 카페
 let loadState = 'loading'; // 저장해 둔 카페를 불러오는 중인지: loading · ready · error
-let found = null;          // 방금 찾은 결과 { place, cafes }. 저장하지 않으므로 화면을 떠나면 사라진다
-let busy = false;          // 카카오맵에서 찾는 중
+let shown = null;          // 지금 지도에 띄운 것 { title, query, zoom, place?, cafeId? }
+let mapState = 'idle';     // 지도: idle(아직 없음) · loading · ready · error
+let mapTimer;
 
 // 글자는 모두 textContent로 넣는다 (카페 이름과 주소는 바깥에서 온 글)
 function el(tag, attrs = {}, ...children) {
@@ -207,50 +241,74 @@ async function fetchAll(query) {
   }
 }
 
-/* ───── 카카오맵에서 찾기 (cafe-places 함수에 부탁한다) ───── */
-async function askCafePlaces(body) {
-  let res;
-  try {
-    res = await fetch(PLACES_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  } catch {
-    throw new Error('카카오맵에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.');
+/* ───── 지도 띄우기 (구글 지도를 iframe에 끼워 넣는다) ───── */
+function openMap(next) {
+  shown = next;
+  clearTimeout(mapTimer);
+  if (!navigator.onLine) { // 끊긴 채로 열면 iframe 안에 브라우저의 영어 오류 화면이 뜬다
+    mapState = 'error';
+    return render();
   }
-  const data = await res.json().catch(() => null);
-  if (!res.ok || !data) throw new Error(data?.error ?? '카페를 찾지 못했어요. 잠시 뒤에 다시 해 주세요.');
-  return data;
+  mapState = 'loading';
+  render();
+  $('map').src = `${GOOGLE_MAP}?output=embed&hl=ko&z=${next.zoom}&q=${encodeURIComponent(next.query)}`;
+  mapTimer = setTimeout(() => {
+    if (mapState !== 'loading') return;
+    mapState = 'error';
+    renderMap();
+  }, MAP_WAIT);
 }
+
+$('map').addEventListener('load', () => {
+  if (mapState !== 'loading') return; // 처음 빈 iframe이 생길 때도 load가 한 번 온다
+  clearTimeout(mapTimer);
+  mapState = 'ready';
+  renderMap(); // 표는 다시 그리지 않는다. 다시 그리면 방금 누른 버튼이 초점을 잃는다
+});
 
 /* ───── 그리기 ───── */
 function render() {
-  $('notice').hidden = loadState !== 'error';
-  $('place').disabled = $('submit').disabled = busy;
-  $('submit').textContent = busy ? '찾는 중…' : '찾기';
-  $('list').toggleAttribute('data-busy', busy);
-  $('back').hidden = !found;
+  renderMap();
+  renderList();
+}
 
-  // 찾은 결과가 있으면 그것을, 없으면 저장해 둔 카페를 보여 준다
-  const loading = !found && loadState === 'loading';
-  const cafes = found ? found.cafes : saved;
-  $('list-title').textContent = found ? `${found.place} 근처 카페` : '저장해 둔 카페';
-  $('list-note').textContent = loading || !cafes.length ? '' : found ? `카카오맵에서 찾은 ${count(cafes.length)}곳` : `${count(cafes.length)}곳`;
+function renderMap() {
+  $('map-title').textContent = shown ? shown.title : '지도';
+  $('map-note').textContent = mapState === 'ready' ? '구글 지도' : '';
+  $('map-empty').hidden = !!shown;
+  $('map-box').hidden = mapState === 'idle' || mapState === 'error';
+  $('map-wait').hidden = mapState !== 'loading';
+  $('map-fail').hidden = mapState !== 'error';
+  $('map').title = shown ? shown.title : '지도';
+  const search = $('map-search'); // 지역으로 지도를 열었을 때만: 그 동네 카페 목록은 카카오맵에서 본다
+  search.hidden = !shown?.place;
+  if (shown?.place) search.href = KAKAO_SEARCH + encodeURIComponent(`${shown.place} 카페`);
+}
+
+function renderList() {
+  $('notice').hidden = loadState !== 'error';
+  const loading = loadState === 'loading';
+  $('list-note').textContent = loading || !saved.length ? '' : `${count(saved.length)}곳`;
   $('rows').replaceChildren(...(loading
     ? Array.from({ length: 3 }, () => el('tr', { class: 'skeleton' }, el('td', { colspan: 3 }, el('span'))))
-    : cafes.map(row)));
-  $('table-wrap').hidden = !loading && !cafes.length;
-  $('empty').hidden = loading || cafes.length > 0;
-  $('empty').textContent = found ? `"${found.place}" 근처에서 카페를 찾지 못했어요. 이름을 다시 확인해 주세요.`
-    : loadState === 'error' ? '위에서 지역이나 역 이름을 넣고 찾아 보세요.'
-    : '저장해 둔 카페가 없어요. 위에서 지역이나 역 이름을 넣고 찾아 보세요.';
+    : saved.map(row)));
+  $('table-wrap').hidden = !loading && !saved.length;
+  $('empty').hidden = loading || saved.length > 0;
+  $('empty').textContent = loadState === 'error' ? '저장해 둔 카페를 불러오면 여기에 나와요.' : '저장해 둔 카페가 없어요.';
 }
 
 function row(cafe) {
-  const link = KAKAO_PLACE.test(cafe.kakao_map_url ?? '')
-    ? el('a', { class: 'btn btn-quiet btn-small', href: cafe.kakao_map_url, target: '_blank', rel: 'noopener', 'aria-label': `${cafe.name} 카카오맵에서 보기`, text: '카카오맵에서 보기' })
-    : el('span', { class: 'muted', text: '링크 없음' });
-  return el('tr', {},
+  const placeId = cafe.kakao_map_url?.match(KAKAO_PLACE)?.[1]; // 카카오맵 장소 번호. 없으면 카카오맵 버튼을 만들지 않는다
+  const isShown = shown?.cafeId === cafe.id;
+  const small = (attrs, text) => el(attrs.href ? 'a' : 'button', { class: 'btn btn-quiet btn-small', ...attrs, text });
+  return el('tr', { class: isShown ? 'is-shown' : null },
     el('th', { scope: 'row', text: cafe.name }),
     el('td', { class: cafe.address ? null : 'muted', text: cafe.address || '주소 정보 없음' }),
-    el('td', {}, el('span', { class: 'row-actions' }, link)));
+    el('td', {}, el('span', { class: 'row-actions' },
+      cafe.address && small({ type: 'button', 'data-map': cafe.id, 'aria-pressed': String(isShown), 'aria-label': `${cafe.name} 지도 보기` }, '지도 보기'),
+      placeId && small({ href: cafe.kakao_map_url, target: '_blank', rel: 'noopener', 'aria-label': `${cafe.name} 카카오맵에서 보기` }, '카카오맵에서 보기'),
+      placeId && small({ href: KAKAO_ROUTE + placeId, target: '_blank', rel: 'noopener', 'aria-label': `${cafe.name}까지 카카오맵 길찾기` }, '길찾기'),
+      !cafe.address && !placeId && el('span', { class: 'muted', text: '지도 정보 없음' }))));
 }
 
 function showProblem(text, focus = false) {
@@ -260,35 +318,28 @@ function showProblem(text, focus = false) {
   if (focus) $('place').focus();
 }
 
-/* ───── 찾기 ───── */
+/* ───── 지역이나 역 이름으로 지도 보기 ───── */
 $('place').addEventListener('input', () => showProblem(null));
 
-$('find').addEventListener('submit', async e => {
+$('find').addEventListener('submit', e => {
   e.preventDefault();
-  if (busy) return;
   const place = $('place').value.trim().replace(/\s+/g, ' ');
   if (!place) return showProblem('지역이나 역 이름을 적어 주세요.', true);
   showProblem(null);
-
-  busy = true;
-  render();
-  try {
-    found = await askCafePlaces({ place });
-  } catch (err) {
-    showProblem(err.message); // 함수가 알려 준 이유를 그대로 보여 준다. 보고 있던 목록은 그대로 둔다
-  } finally {
-    busy = false;
-    render();
-    if (document.activeElement === document.body) $('place').focus();
-  }
+  openMap({ title: `${place} 주변 지도`, query: place, zoom: 16, place });
 });
 
-$('back').addEventListener('click', () => {
-  found = null;
-  render();
-  $('place').focus();
+/* ───── 저장해 둔 카페를 지도에 띄우기 ───── */
+$('rows').addEventListener('click', e => {
+  const button = e.target.closest('[data-map]');
+  if (!button) return;
+  const cafe = saved.find(c => c.id === Number(button.dataset.map));
+  openMap({ title: `${cafe.name} 위치`, query: cafe.address, zoom: 17, cafeId: cafe.id });
+  $('map-card').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  $('rows').querySelector(`[data-map="${cafe.id}"]`)?.focus({ preventScroll: true }); // 다시 그리면 누른 버튼이 새로 만들어진다
 });
 
+$('map-retry').addEventListener('click', () => openMap(shown));
 $('retry').addEventListener('click', () => { window.supabase ? load() : location.reload(); });
 
 load();
