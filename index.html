@@ -135,6 +135,7 @@ iframe.view { display: block; width: 100%; border: 0; }
 .cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
 @container (max-width: 900px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @container (max-width: 440px) { .cards { grid-template-columns: minmax(0, 1fr); } }
+.cards > .card-wide { grid-column: 1 / -1; } /* 주변 카페 카드는 숫자 카드 4장 아래에서 한 줄을 다 쓴다 */
 a.card { display: flex; flex-direction: column; gap: 2px; color: inherit; text-decoration: none; }
 a.card:hover { border-color: var(--bar); }
 a.card .card-label { display: flex; justify-content: space-between; }
@@ -194,6 +195,7 @@ a.card .card-label::after { content: "›"; font-size: 15px; line-height: 1.2; }
     <a href="#menu">메뉴 · 재고</a>
     <a href="#reviews">리뷰 · AI 답글</a>
     <a href="#promo">AI 홍보 문구</a>
+    <a href="#rivals">주변 카페</a>
   </nav>
   <div class="ai-box">
     <label for="ai-model">AI 모델</label>
@@ -244,6 +246,11 @@ a.card .card-label::after { content: "›"; font-size: 15px; line-height: 1.2; }
           <span class="card-label">재고 부족 메뉴</span>
           <strong class="card-value" id="v-stock">–</strong>
           <span class="card-sub" id="s-stock">&nbsp;</span>
+        </a>
+        <a class="card card-wide" href="#rivals">
+          <span class="card-label">주변 카페</span>
+          <strong class="card-value" id="v-rivals">–</strong>
+          <span class="card-sub" id="s-rivals">&nbsp;</span>
         </a>
       </div>
 
@@ -303,6 +310,7 @@ const PAGES = {
   menu:    { label: '메뉴 · 재고', file: 'menu.html' },
   reviews: { label: '리뷰 · AI 답글', file: 'reviews.html' },
   promo:   { label: 'AI 홍보 문구', file: 'promo.html' },
+  rivals:  { label: '주변 카페', file: 'rivals.html' },
 };
 const views = { home: $('home'), frame: $('frame'), soon: $('soon'), broken: $('broken') };
 let showTurn = 0;
@@ -402,13 +410,14 @@ async function loadHome() {
     if (!window.supabase) throw new Error('Supabase 연결 도구를 불러오지 못했다');
     db ??= supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const since = new Date(kstMidnight(lastDays(7, now)[0])).toISOString();
-    const [sales, menus, reviews] = await Promise.all([
+    const [sales, menus, reviews, rivals] = await Promise.all([
       fetchAll(() => db.from('sales').select('id, sold_at, amount').gte('sold_at', since)),
       fetchAll(() => db.from('menus').select('id, name, stock').not('stock', 'is', null)),
       fetchAll(() => db.from('reviews').select('id, rating, reply')),
+      fetchAll(() => db.from('rivals').select('id, name')),
     ]);
     if (turn !== homeTurn) return;
-    renderHome(summarize(sales, menus, reviews, now));
+    renderHome(summarize(sales, menus, reviews, rivals, now));
     setHome('ready');
   } catch (err) {
     console.error(err);
@@ -427,7 +436,7 @@ async function fetchAll(query) {
   }
 }
 
-function summarize(sales, menus, reviews, now) {
+function summarize(sales, menus, reviews, rivals, now) {
   const days = lastDays(7, now).map(key => ({ key, total: 0, count: 0 }));
   const byKey = Object.fromEntries(days.map(d => [d.key, d]));
   const yesterday = days.at(-2).key;
@@ -444,7 +453,7 @@ function summarize(sales, menus, reviews, now) {
   const rated = reviews.reduce((sum, r) => sum + r.rating, 0);
   return {
     at: now, // 이 숫자를 읽은 시각
-    days, yesterdaySoFar, low,
+    days, yesterdaySoFar, low, rivals,
     reviews: { total: reviews.length, waiting: reviews.filter(r => !r.reply).length, avg: reviews.length ? rated / reviews.length : null },
   };
 }
@@ -469,6 +478,13 @@ function renderHome(next) {
 
   $('v-stock').textContent = count(stats.low.length) + '개';
   $('s-stock').textContent = stats.low.length ? `가장 적게 남은 메뉴: ${stats.low[0].name} (${stats.low[0].stock}개)` : '부족한 메뉴가 없어요';
+
+  // 주변 카페: rivals 테이블에 저장해 둔 카페 (브리핑에는 보내지 않는다)
+  const rivals = stats.rivals;
+  $('v-rivals').textContent = count(rivals.length) + '곳';
+  $('s-rivals').textContent = rivals.length
+    ? rivals.slice(0, 5).map(r => r.name).join(' · ') + (rivals.length > 5 ? ` 외 ${count(rivals.length - 5)}곳` : '')
+    : '저장해 둔 카페가 없어요. 눌러서 근처 카페를 찾아 보세요';
 
   $('toggle').hidden = false;
   $('brief-btn').disabled = briefBusy; // 숫자가 있어야 브리핑을 부탁할 수 있다

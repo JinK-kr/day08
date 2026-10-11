@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 이 저장소
 
-동네 카페 사장님이 쓰는 "골목카페 운영 대시보드". 정적 HTML 5개와 Supabase(DB + Edge Function 하나)로 이루어진다.
+동네 카페 사장님이 쓰는 "골목카페 운영 대시보드". 정적 HTML 6개와 Supabase(DB + Edge Function 둘)로 이루어진다.
 
 - [PRD.md](PRD.md) — 무엇을 만드는지. 화면, 데이터, AI 규격의 기준 문서다. 동작을 바꾸려면 PRD를 먼저 고친다.
 - [STEPS.md](STEPS.md) — 어떤 순서로 만들고 단계마다 무엇을 확인하는지. 어디까지 만들었는지는 이 문서 맨 위 표의 체크로 본다.
@@ -36,7 +36,7 @@ for f in *.html; do printf '%s  ' "$f"; sed -n '/공통 시작/,/공통 끝/p' "
 
 ## 구조
 
-- `index.html`은 틀이다. 왼쪽 메뉴와 가운데 iframe으로 되어 있고, **홈 화면은 별도 파일이 아니라 `index.html` 안에 있다.** 나머지 4개(`sales.html`, `menu.html`, `reviews.html`, `promo.html`)는 iframe에 띄운다. 현재 메뉴는 주소의 `#sales` 같은 해시로 기억한다.
+- `index.html`은 틀이다. 왼쪽 메뉴와 가운데 iframe으로 되어 있고, **홈 화면은 별도 파일이 아니라 `index.html` 안에 있다.** 나머지 5개(`sales.html`, `menu.html`, `reviews.html`, `promo.html`, `rivals.html`)는 iframe에 띄운다. 현재 메뉴는 주소의 `#sales` 같은 해시로 기억한다.
 - 페이지 하나는 HTML 파일 하나다. CSS와 JS를 같은 파일 안에 넣고, 공용 `.css` / `.js` 파일을 만들지 않는다. 각 페이지는 iframe 안에서도 혼자 열어도 동작해야 한다.
 - 그래서 공통 디자인 묶음(PRD 6장)이 각 파일 `<style>` 맨 위, `공통 시작` ~ `공통 끝` 주석 사이에 **똑같이 복사돼** 있다. 색 · 글꼴 값과 여러 페이지가 함께 쓰는 부품(`.card`, `.btn`, `.input`, `.chip`, `.badge`, `.notice`, `.table`, `.toast`)이 들어 있다. `index.html`이 원본이다. 한 글자라도 바꾸면 모든 페이지를 같이 바꾸고, 페이지에만 필요한 모양은 묶음 아래에 따로 적는다.
 - 페이지끼리 직접 값을 주고받지 않는다. 모든 페이지가 Supabase에서 다시 읽는다. (예: 리뷰에 답글을 저장하면 홈의 숫자는 홈을 다시 열 때 바뀐다.)
@@ -56,7 +56,8 @@ for f in *.html; do printf '%s  ' "$f"; sed -n '/공통 시작/,/공통 끝/p' "
 
 ## Supabase
 
-- 프로젝트는 `myproject`(ref `ngyqprsdcajizpzoqxip`)다. 테이블은 `menus`, `sales`, `reviews` 3개이고, 같은 프로젝트의 `guestbook`은 다른 실습 것이므로 건드리지 않는다.
+- 프로젝트는 `myproject`(ref `ngyqprsdcajizpzoqxip`)다. 테이블은 `menus`, `sales`, `reviews`, `rivals` 4개이고, 같은 프로젝트의 `guestbook`은 다른 실습 것이므로 건드리지 않는다.
+- `rivals`(근처 경쟁 카페)는 주변 카페 화면과 홈의 "주변 카페" 카드가 읽기만 한다. 로그인 없이는 읽기만 되고, 내용을 넣거나 고칠 때는 Supabase 커넥터로 한다. 화면에서 새로 찾은 결과는 여기에 저장하지 않는다.
 - 무료 프로젝트라 한동안 안 쓰면 일시정지된다. 다시 켠 뒤에는 상태가 `ACTIVE_HEALTHY`가 될 때까지 기다렸다가 작업한다. `COMING_UP` 중에도 SQL은 실행되지만, 그때 만든 것은 백업 복원이 끝나면서 사라진다.
 - 로그인 없이(anon) 허용한 동작은 PRD 10장 표가 전부다. 표에 없는 동작(메뉴 삭제, 판매 기록 수정, 리뷰 삭제)이 필요하면 페이지보다 정책을 먼저 추가한다.
 - 판매와 재고 규칙은 트리거 함수 `sales_apply`(추가 전)와 `sales_undo`(삭제 후)에 있다.
@@ -74,6 +75,14 @@ for f in *.html; do printf '%s  ' "$f"; sed -n '/공통 시작/,/공통 끝/p' "
 - 리뷰의 "AI 분석"은 감정과 답글 초안을 받아 **바로 저장한다**(사용자가 정한 것). 다만 이미 답글이 있으면 덮어쓰기 전에 한 번 묻는다. 사장님이 고쳐 쓴 답글이 말없이 사라지면 안 되기 때문이다.
 - AI를 부르는 페이지에는 `askCafeAi(body)` 도우미가 같은 모양으로 들어 있다(`index.html`, `reviews.html`). 함수가 돌려준 `error` 글을 그대로 화면에 보여 준다.
 - 화면을 시험할 때는 `window.fetch`를 잠깐 바꿔 가짜 AI 답을 돌려주게 하면 AI 요청 수를 쓰지 않는다. 실제 AI 호출은 마지막에 한두 번만 한다.
+
+## 주변 카페 찾기
+
+- 주변 카페 화면은 Edge Function `cafe-places`에 지역이나 역 이름을 보내 카카오맵의 카페 5곳을 받는다. AI가 아니라서 `cafe-ai`에 넣지 않고 따로 뒀다. 주고받는 모양은 PRD 9장 끝에 있다.
+- 코드는 `supabase/functions/cafe-places/index.ts`에 있고 `cafe-ai`와 같은 방법으로 배포한다(`verify_jwt`는 끈다).
+- 카카오 키는 Secrets의 `KAKAO_REST_API_KEY`에만 있고, 사용자가 카카오디벨로퍼스에서 발급해 직접 넣는다. 채팅으로 키를 받지 않는다. 그 앱의 [카카오맵] 사용 설정이 켜져 있어야 하고, 키에 "호출 허용 IP 주소"는 등록하지 않는다.
+- 키가 없으면 함수는 "주변 카페를 찾을 준비가 아직 끝나지 않았어요"(500)로 답한다. 코드 고장이 아니다. 화면을 시험할 때는 `window.fetch`를 잠깐 바꿔 가짜 답을 돌려주게 한다.
+- 채팅에서 쓰는 카카오맵 커넥터(PlayMCP)는 Claude만 쓸 수 있다. 웹 화면은 이 함수를 거쳐야 카카오맵을 찾을 수 있다.
 
 ## 보안
 
