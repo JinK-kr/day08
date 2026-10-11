@@ -98,19 +98,30 @@ body { display: grid; grid-template-columns: 220px minmax(0, 1fr); height: 100dv
 .nav a[aria-current="page"] { background: var(--accent); color: #fff; font-weight: 600; }
 .nav a:focus-visible { outline-color: #fff; }
 
-/* AI 모델 고르기 (왼쪽 메뉴 맨 아래) */
+/* 오늘 요약 보내기 · AI 모델 고르기 (왼쪽 메뉴 맨 아래) */
 .sidebar { overflow-y: auto; }
-.ai-box { display: flex; flex-direction: column; gap: 6px; margin-top: auto; padding: 12px 12px 0; border-top: 1px solid rgba(255, 255, 255, .14); color: #D9CCBD; font-size: 13px; }
-.ai-box select, .ai-box button { width: 100%; min-height: 36px; padding: 6px 8px; border: 1px solid rgba(255, 255, 255, .28); border-radius: 8px; background: #3A2E23; color: #fff; font-size: 13px; }
-.ai-box button { background: transparent; }
-.ai-box button:hover:not(:disabled) { background: rgba(255, 255, 255, .08); }
-.ai-box :focus-visible { outline-color: #fff; }
+.share-box, .ai-box { display: flex; flex-direction: column; gap: 6px; padding: 12px 12px 0; border-top: 1px solid rgba(255, 255, 255, .14); color: #D9CCBD; font-size: 13px; }
+.share-box { margin-top: auto; }
+.share-box button, .ai-box select, .ai-box button { width: 100%; min-height: 36px; padding: 6px 8px; border: 1px solid rgba(255, 255, 255, .28); border-radius: 8px; background: #3A2E23; color: #fff; font-size: 13px; }
+.share-box button, .ai-box button { background: transparent; }
+.share-box button:hover, .ai-box button:hover:not(:disabled) { background: rgba(255, 255, 255, .08); }
+.share-box :focus-visible, .ai-box :focus-visible { outline-color: #fff; }
+.share-box button { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; } /* 글자 없이 아이콘만 있는 버튼 */
 .ai-box p { min-height: 2.8em; line-height: 1.4; overflow-wrap: anywhere; }
 .ai-box p[data-tone="good"] { color: #A8DDB9; }
 .ai-box p[data-tone="bad"] { color: #F5B5AF; }
 main { min-width: 0; min-height: 0; }
 .view { height: 100%; overflow: auto; }
 iframe.view { display: block; width: 100%; border: 0; }
+
+/* 오늘 요약 보내기: 버튼을 누르면 뜨는 창 */
+.share { width: min(440px, calc(100% - 32px)); padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--text); }
+.share::backdrop { background: rgba(43, 33, 24, .45); }
+.share h2 { margin-bottom: 4px; }
+.share textarea { display: block; width: 100%; margin-top: 12px; line-height: 1.6; resize: none; }
+.share .form-error { margin-top: 10px; }
+.share-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.share-actions span { margin-right: auto; font-size: 13px; }
 
 /* 아직 없는 페이지 · 불러오지 못한 페이지 */
 .soon { display: grid; place-items: center; padding: 32px; text-align: center; }
@@ -179,7 +190,7 @@ a.card .card-label::after { content: "›"; font-size: 15px; line-height: 1.2; }
   .brand { padding: 0 4px; font-size: 17px; white-space: nowrap; }
   .brand small { display: none; }
   .nav { flex-direction: row; }
-  .ai-box { flex: none; flex-direction: row; align-items: center; margin: 0; padding: 0 0 0 12px; border-top: 0; border-left: 1px solid rgba(255, 255, 255, .14); white-space: nowrap; }
+  .share-box, .ai-box { flex: none; flex-direction: row; align-items: center; margin: 0; padding: 0 0 0 12px; border-top: 0; border-left: 1px solid rgba(255, 255, 255, .14); white-space: nowrap; }
   .ai-box select, .ai-box button { width: auto; }
   .ai-box p { min-height: 0; }
 }
@@ -197,6 +208,11 @@ a.card .card-label::after { content: "›"; font-size: 15px; line-height: 1.2; }
     <a href="#promo">AI 홍보 문구</a>
     <a href="#rivals">주변 카페</a>
   </nav>
+  <div class="share-box">
+    <button type="button" id="share-open" aria-label="오늘 요약 보내기" title="오늘 요약 보내기">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-5 4v-4H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/><path d="M8 9h8M8 12.5h5"/></svg>
+    </button>
+  </div>
   <div class="ai-box">
     <label for="ai-model">AI 모델</label>
     <select id="ai-model" disabled><option>불러오는 중…</option></select>
@@ -294,6 +310,22 @@ a.card .card-label::after { content: "›"; font-size: 15px; line-height: 1.2; }
     </div>
   </section>
 </main>
+
+<dialog class="share" id="share" aria-labelledby="share-title">
+  <h2 id="share-title">오늘 요약 보내기</h2>
+  <p class="muted" id="share-guide" aria-live="polite"></p>
+  <textarea class="input" id="share-text" rows="6" readonly aria-label="보낼 요약" hidden></textarea>
+  <p class="form-error" id="share-error" role="alert" hidden></p>
+  <div class="share-actions">
+    <span class="muted" id="share-count"></span>
+    <button type="button" class="btn btn-quiet" id="share-close">닫기</button>
+    <button type="button" class="btn" id="share-retry" hidden>다시 시도</button>
+    <button type="button" class="btn" id="share-copy">복사하기</button>
+    <button type="button" class="btn" id="share-send" hidden>공유하기</button>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -741,6 +773,110 @@ $('brief-btn').addEventListener('click', async () => {
     button.textContent = '오늘 브리핑';
   }
 });
+
+/* ───── 오늘 요약 보내기 ─────
+   왼쪽 메뉴 아래 버튼. 오늘 매출 · 주문 수 · 평균 별점을 새로 읽어 200자 안의 글로 만든다.
+   키가 필요 없는 방법만 쓴다 (PRD 5.1). 카카오톡으로 저절로 보내지는 못하고, 복사하거나 공유 창을 열어 넘긴다. */
+let shareTurn = 0;
+
+// 공유 창은 휴대폰 · 태블릿에서만 쓴다. PC의 공유 창에는 카카오톡이 없어서 복사가 낫다
+const canShare = () => !!navigator.share && matchMedia('(pointer: coarse)').matches;
+
+async function todaySummary() {
+  if (!window.supabase) throw new Error('Supabase 연결 도구를 불러오지 못했다');
+  db ??= supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const now = Date.now(), key = kstKey(now);
+  const [sales, reviews] = await Promise.all([
+    fetchAll(() => db.from('sales').select('amount').gte('sold_at', new Date(kstMidnight(key)).toISOString())),
+    fetchAll(() => db.from('reviews').select('rating')),
+  ]);
+  const total = sales.reduce((sum, s) => sum + s.amount, 0);
+  const rated = reviews.reduce((sum, r) => sum + r.rating, 0);
+  const time = new Date(now).toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour: 'numeric', minute: '2-digit' });
+  // 네 줄로 고정한 모양이라 숫자가 커져도 200자를 넘지 않는다
+  return [
+    `[골목카페] ${longDate(key)} ${time}`,
+    `· 오늘 매출 ${won(total)}`,
+    `· 주문 ${count(sales.length)}건` + (sales.length ? ` (한 건에 평균 ${won(total / sales.length)})` : ''),
+    reviews.length ? `· 평균 별점 ${(rated / reviews.length).toFixed(1)}점 (리뷰 ${count(reviews.length)}개)` : '· 평균 별점: 아직 리뷰가 없어요',
+  ].join('\n');
+}
+
+// state: 'loading' 세는 중 · 'ready' 요약이 나왔다 · 'error' 숫자를 읽지 못했다
+function setShare(state) {
+  const ready = state === 'ready', failed = state === 'error', share = canShare();
+  $('share-guide').textContent = !ready ? '오늘 숫자를 세는 중…'
+    : share ? '공유 창에서 카카오톡을 고르고 "나와의 채팅"으로 보내 주세요.'
+    : '복사한 뒤 카카오톡 "나와의 채팅"에 붙여 넣어 주세요.';
+  $('share-guide').hidden = failed;
+  $('share-text').hidden = !ready;
+  $('share-count').textContent = ready ? `${count($('share-text').value.length)}자 / 200자` : '';
+  shareProblem(failed ? '숫자를 불러오지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.' : null);
+  $('share-retry').hidden = !failed;
+  $('share-copy').hidden = failed;
+  $('share-send').hidden = failed || !share;
+  $('share-copy').classList.toggle('btn-quiet', share); // 강조 버튼은 하나만: 공유가 되면 공유, 아니면 복사
+  $('share-copy').disabled = $('share-send').disabled = !ready;
+}
+
+function shareProblem(text) {
+  $('share-error').textContent = text ?? '';
+  $('share-error').hidden = !text;
+}
+
+async function openShare() {
+  const turn = ++shareTurn;
+  if (!$('share').open) $('share').showModal();
+  setShare('loading');
+  try {
+    const text = await todaySummary();
+    if (turn !== shareTurn) return; // 기다리는 사이 다시 눌렀다
+    $('share-text').value = text;
+    setShare('ready');
+    (canShare() ? $('share-send') : $('share-copy')).focus();
+  } catch (err) {
+    console.error(err);
+    if (turn === shareTurn) setShare('error');
+  }
+}
+
+$('share-open').addEventListener('click', openShare);
+$('share-retry').addEventListener('click', openShare);
+$('share-close').addEventListener('click', () => $('share').close());
+
+$('share-copy').addEventListener('click', async () => {
+  const box = $('share-text');
+  try {
+    await navigator.clipboard.writeText(box.value);
+  } catch {
+    // 권한이 없는 브라우저에서는 옛 방식으로 복사한다
+    box.select();
+    if (!document.execCommand('copy')) return shareProblem('복사하지 못했어요. 위 글자를 직접 선택해서 복사해 주세요.');
+  }
+  $('share').close();
+  toast('요약을 복사했어요. 카카오톡 "나와의 채팅"에 붙여 넣어 주세요.');
+});
+
+$('share-send').addEventListener('click', async () => {
+  try {
+    await navigator.share({ text: $('share-text').value });
+    $('share').close();
+  } catch (err) {
+    // 공유 창을 그냥 닫은 것(AbortError)은 실패가 아니다
+    if (err.name !== 'AbortError') shareProblem('공유 창을 열지 못했어요. "복사하기"로 복사해서 붙여 넣어 주세요.');
+  }
+});
+
+/* ───── 알림 ───── */
+let toastTimer;
+function toast(text, isError = false) {
+  const box = $('toast');
+  box.textContent = text;
+  box.classList.toggle('is-error', isError);
+  box.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { box.hidden = true; }, isError ? 5000 : 2500);
+}
 
 loadModels();
 addEventListener('hashchange', show);
