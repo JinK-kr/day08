@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>메뉴 · 재고 · 골목카페</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css">
+<style>
+/* ===== 공통 시작 — 다섯 페이지가 똑같이 쓴다 (PRD 6장). 고치면 다섯 파일을 모두 고친다. ===== */
+:root {
+  --bg: #FAF7F2;
+  --surface: #FFFFFF;
+  --sidebar: #2B2118;
+  --text: #2B2118;
+  --muted: #76685A;
+  --line: #E8DFD3;
+  --accent: #A85A17;
+  --accent-soft: #F3E4D3;
+  --bar: #B5A38F;
+  --good: #2E7D4F;
+  --warn: #A66300;
+  --bad: #B3261E;
+  --font: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); }
+h1 { margin: 0; font-size: 22px; font-weight: 700; }
+h2 { margin: 0; font-size: 15px; font-weight: 600; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: default; opacity: .5; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.page { padding: 32px; }
+.wrap { max-width: 1120px; }
+.page-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 20px; }
+.page-head p { color: var(--muted); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+.card-label { color: var(--muted); font-size: 13px; }
+.card-value { font-size: 28px; font-weight: 700; line-height: 1.3; }
+.card-sub { color: var(--muted); font-size: 13px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; padding: 9px 16px; border: 1px solid var(--accent); border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.btn-quiet { border-color: var(--line); background: var(--surface); color: var(--text); font-weight: 500; }
+.btn-small { padding: 6px 12px; font-size: 13px; }
+.btn-danger { border-color: var(--bad); background: var(--bad); }
+
+.field { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 13px; }
+.input { min-width: 0; min-height: 40px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 15px; }
+.input::placeholder { color: var(--muted); }
+.input[aria-invalid="true"] { border-color: var(--bad); }
+.form-error { color: var(--bad); font-size: 13px; }
+.chip { padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 13px; }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
+.stepper { display: inline-flex; align-items: center; gap: 6px; }
+.step { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 17px; line-height: 1; }
+
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; background: var(--bg); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.badge::before { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); content: ""; }
+.badge-good::before { background: var(--good); }
+.badge-warn::before { background: var(--warn); }
+.badge-bad { background: color-mix(in srgb, var(--bad) 10%, var(--surface)); color: var(--bad); }
+.badge-bad::before { background: var(--bad); }
+
+.notice { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.notice::before { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--muted); color: #fff; font-size: 13px; font-weight: 700; line-height: 22px; text-align: center; content: "i"; }
+.notice.is-error { border-color: var(--bad); }
+.notice.is-error::before { background: var(--bad); content: "!"; }
+.notice p { flex: 1 1 260px; }
+
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { padding: 10px 8px; border-bottom: 1px solid var(--line); font-weight: 400; text-align: left; }
+.table thead th { color: var(--muted); font-size: 13px; }
+.table .num { font-variant-numeric: tabular-nums; text-align: right; }
+.table tbody tr:last-child > * { border-bottom: 0; }
+.table-wrap { overflow-x: auto; }
+.row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.skeleton span { display: block; height: 20px; border-radius: 6px; background: var(--line); }
+.empty { padding: 32px 16px; color: var(--muted); text-align: center; }
+.muted { color: var(--muted); }
+
+.toast { position: fixed; bottom: 24px; left: 50%; z-index: 10; max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 8px; background: var(--text); color: #fff; font-size: 14px; transform: translateX(-50%); }
+.toast.is-error { background: var(--bad); }
+
+@media (max-width: 760px) { .page { padding: 16px; } }
+/* ===== 공통 끝 ===== */
+
+/* 메뉴 추가 */
+.add { margin-bottom: 16px; }
+.add h2 { margin-bottom: 12px; }
+.add-grid { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)) auto; align-items: end; gap: 12px; }
+.add .form-error { margin-top: 10px; }
+
+/* 메뉴 목록 */
+.tools { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.search { width: 220px; }
+.table { min-width: 760px; }
+.table th[scope="row"] { font-weight: 600; }
+.table td:nth-child(2) { white-space: nowrap; }
+.table .input { width: 100%; }
+.col-price { width: 130px; }
+.col-stock { width: 150px; }
+.col-status { width: 120px; }
+.col-actions { width: 150px; }
+.stock-num { min-width: 3ch; font-variant-numeric: tabular-nums; text-align: center; }
+
+/* 재고 5개 이하: 빨간색 */
+.is-low > * { background: color-mix(in srgb, var(--bad) 5%, var(--surface)); }
+.is-low .stock-num { color: var(--bad); font-weight: 700; }
+
+.list[data-state="loading"][data-loaded] .table-wrap { opacity: .55; }
+
+@media (max-width: 760px) {
+  .add-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .add-grid > :first-child, .add-grid > .btn { grid-column: 1 / -1; }
+  .search { width: 100%; }
+}
+</style>
+</head>
+<body class="page">
+
+<div class="wrap">
+  <header class="page-head">
+    <h1>메뉴 · 재고</h1>
+    <p id="summary"></p>
+  </header>
+
+  <div class="notice is-error" id="notice" hidden>
+    <p>메뉴를 불러오지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.</p>
+    <button type="button" class="btn btn-quiet" id="retry">다시 시도</button>
+  </div>
+
+  <form class="card add" id="add" novalidate>
+    <h2>메뉴 추가</h2>
+    <div class="add-grid">
+      <label class="field">메뉴 이름
+        <input class="input" id="add-name" maxlength="40" autocomplete="off" placeholder="예: 딸기 케이크">
+      </label>
+      <label class="field">분류
+        <select class="input" id="add-category"></select>
+      </label>
+      <label class="field">가격(원)
+        <input class="input" id="add-price" type="number" inputmode="numeric" min="0" step="100" placeholder="예: 6500">
+      </label>
+      <label class="field">재고(개)
+        <input class="input" id="add-stock" type="number" inputmode="numeric" min="0" step="1" placeholder="비우면 세지 않음">
+      </label>
+      <button class="btn" id="add-submit">추가</button>
+    </div>
+    <p class="form-error" id="add-error" role="alert" hidden></p>
+  </form>
+
+  <section class="card list" id="list" data-state="loading">
+    <div class="tools" id="tools" hidden>
+      <div class="chips" id="chips" role="group" aria-label="분류로 걸러 보기"></div>
+      <input class="input search" id="search" type="search" placeholder="메뉴 이름으로 찾기" aria-label="메뉴 이름으로 찾기">
+    </div>
+    <div class="table-wrap" id="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">메뉴 이름</th>
+            <th scope="col">분류</th>
+            <th scope="col" class="num col-price">가격</th>
+            <th scope="col" class="col-stock">재고</th>
+            <th scope="col" class="col-status">상태</th>
+            <th scope="col" class="col-actions" aria-label="고치기"></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p class="empty" id="empty" hidden></p>
+  </section>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* Supabase 연결 — publishable key만 넣는다. */
+const SUPABASE_URL = 'https://ngyqprsdcajizpzoqxip.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_NwDpUc3O_dfJvOt9tA_Dhw_McmOYcMV';
+
+const LOW_STOCK = 5; // 재고가 이 개수 이하면 빨간색 (PRD 8장)
+const CATEGORIES = ['커피', '음료', '디저트', '기타'];
+const MAX_PRICE = 10_000_000, MAX_STOCK = 100_000;
+
+const $ = id => document.getElementById(id);
+const count = n => n.toLocaleString('ko-KR');
+const won = n => count(n) + '원';
+const isLow = m => m.stock != null && m.stock <= LOW_STOCK;
+
+let db;
+let menus = [];
+let category = '전체', query = '';
+let editingId = null; // 고치는 중인 메뉴
+
+// 글자는 모두 textContent로 넣는다 (메뉴 이름은 사람이 적은 글)
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs)) {
+    if (key === 'text') node.textContent = value;
+    else if (value === true) node.setAttribute(key, '');
+    else if (value !== false && value != null) node.setAttribute(key, value);
+  }
+  node.append(...children);
+  return node;
+}
+
+/* ───── 불러오기 ───── */
+async function load() {
+  setState('loading');
+  try {
+    if (!window.supabase) throw new Error('Supabase 연결 도구를 불러오지 못했다');
+    db ??= supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    menus = await fetchAll(() => db.from('menus').select('id, name, category, price, stock'));
+    sortMenus();
+    editingId = null;
+    $('list').dataset.loaded = 'true';
+    setState('ready');
+    render();
+  } catch (err) {
+    console.error(err);
+    setState('error');
+  }
+}
+
+// Supabase는 한 번에 1,000줄까지만 준다.
+async function fetchAll(query) {
+  const size = 1000, rows = [];
+  for (let from = 0; ; from += size) {
+    const { data, error } = await query().order('id').range(from, from + size - 1);
+    if (error) throw error;
+    rows.push(...data);
+    if (data.length < size) return rows;
+  }
+}
+
+function setState(state) {
+  const list = $('list');
+  list.dataset.state = state;
+  $('notice').hidden = state !== 'error';
+  if (list.dataset.loaded) return; // 다시 불러올 때는 보던 목록을 그대로 둔다
+  $('empty').hidden = true;
+  $('table-wrap').hidden = state !== 'loading';
+  $('rows').replaceChildren(...(state === 'loading'
+    ? Array.from({ length: 4 }, () => el('tr', { class: 'skeleton' }, el('td', { colspan: 6 }, el('span'))))
+    : []));
+}
+
+// 재고 5개 이하가 맨 위, 그중에서도 적게 남은 것부터. 나머지는 이름순.
+function sortMenus() {
+  menus.sort((a, b) => isLow(b) - isLow(a) || (isLow(a) ? a.stock - b.stock : 0) || a.name.localeCompare(b.name, 'ko'));
+}
+
+/* ───── 그리기 ───── */
+function render() {
+  const low = menus.filter(isLow).length;
+  $('summary').textContent = menus.length ? `메뉴 ${count(menus.length)}개 · 재고 ${LOW_STOCK}개 이하 ${count(low)}개` : '';
+
+  const names = ['전체', ...new Set([...CATEGORIES, ...menus.map(m => m.category)])];
+  if (!names.includes(category)) category = '전체';
+  $('chips').replaceChildren(...names.map(name => el('button', { type: 'button', class: 'chip', 'aria-pressed': String(name === category), text: name })));
+  $('tools').hidden = !menus.length;
+
+  const q = query.trim().toLowerCase();
+  const shown = menus.filter(m => (category === '전체' || m.category === category) && m.name.toLowerCase().includes(q));
+  $('rows').replaceChildren(...shown.map(m => m.id === editingId ? editRow(m) : viewRow(m)));
+  $('table-wrap').hidden = !shown.length;
+  $('empty').hidden = shown.length > 0;
+  $('empty').textContent = menus.length ? '조건에 맞는 메뉴가 없어요.' : '아직 메뉴가 없어요. 위에서 첫 메뉴를 추가해 보세요.';
+}
+
+function viewRow(m) {
+  const stock = m.stock == null
+    ? el('span', { class: 'muted', text: '세지 않음' })
+    : el('span', { class: 'stepper' },
+        el('button', { type: 'button', class: 'step', 'data-act': 'minus', 'data-id': m.id, 'aria-label': `${m.name} 재고 1개 줄이기`, disabled: m.stock <= 0, text: '−' }),
+        el('span', { class: 'stock-num', text: count(m.stock) }),
+        el('button', { type: 'button', class: 'step', 'data-act': 'plus', 'data-id': m.id, 'aria-label': `${m.name} 재고 1개 늘리기`, disabled: m.stock >= MAX_STOCK, text: '+' }));
+  const status = m.stock === 0 ? ['badge badge-bad', '품절'] : isLow(m) ? ['badge badge-bad', '재고 부족'] : ['badge badge-good', '판매 중'];
+  return el('tr', { class: isLow(m) ? 'is-low' : null },
+    el('th', { scope: 'row', text: m.name }),
+    el('td', { text: m.category }),
+    el('td', { class: 'num', text: won(m.price) }),
+    el('td', {}, stock),
+    el('td', {}, el('span', { class: status[0], text: status[1] })),
+    el('td', {}, el('span', { class: 'row-actions' },
+      el('button', { type: 'button', class: 'btn btn-quiet btn-small', 'data-act': 'edit', 'data-id': m.id, 'aria-label': `${m.name} 고치기`, text: '고치기' }))));
+}
+
+function editRow(m) {
+  const options = [...new Set([...CATEGORIES, m.category])].map(c => el('option', { value: c, selected: c === m.category, text: c }));
+  return el('tr', { class: 'is-editing', 'data-id': m.id },
+    el('th', { scope: 'row' }, el('input', { class: 'input', 'data-f': 'name', value: m.name, maxlength: 40, 'aria-label': '메뉴 이름' })),
+    el('td', {}, el('select', { class: 'input', 'data-f': 'category', 'aria-label': '분류' }, ...options)),
+    el('td', {}, el('input', { class: 'input', 'data-f': 'price', type: 'number', inputmode: 'numeric', min: 0, step: 100, value: m.price, 'aria-label': '가격(원)' })),
+    el('td', {}, el('input', { class: 'input', 'data-f': 'stock', type: 'number', inputmode: 'numeric', min: 0, step: 1, value: m.stock ?? '', placeholder: '세지 않음', 'aria-label': '재고(개)' })),
+    el('td', { colspan: 2 },
+      el('span', { class: 'row-actions' },
+        el('button', { type: 'button', class: 'btn btn-small', 'data-act': 'save', 'data-id': m.id, text: '저장' }),
+        el('button', { type: 'button', class: 'btn btn-quiet btn-small', 'data-act': 'cancel', 'data-id': m.id, text: '취소' })),
+      el('p', { class: 'form-error', role: 'alert' })));
+}
+
+/* ───── 입력 확인 (추가와 고치기가 같이 쓴다) ───── */
+function check(raw, selfId) {
+  const name = raw.name.trim();
+  if (!name) return { field: 'name', error: '메뉴 이름을 적어 주세요.' };
+  if (menus.some(m => m.id !== selfId && m.name.trim().toLowerCase() === name.toLowerCase())) return { field: 'name', error: '같은 이름의 메뉴가 이미 있어요.' };
+  const price = Number(raw.price);
+  if (raw.price.trim() === '' || !Number.isInteger(price) || price < 0 || price > MAX_PRICE) return { field: 'price', error: '가격은 0원부터 1,000만 원까지 숫자로 적어 주세요.' };
+  const stock = raw.stock.trim() === '' ? null : Number(raw.stock);
+  if (raw.stockBad || (stock !== null && (!Number.isInteger(stock) || stock < 0 || stock > MAX_STOCK))) return { field: 'stock', error: '재고는 0개부터 10만 개까지 숫자로 적어 주세요. 세지 않는 메뉴는 비워 두면 돼요.' };
+  return { value: { name, category: raw.category, price, stock } };
+}
+
+// 확인 결과를 입력 칸에 표시하고, 틀린 칸으로 커서를 옮긴다
+function showCheck(result, inputs, errorEl) {
+  for (const key of ['name', 'price', 'stock']) inputs[key].setAttribute('aria-invalid', String(result.field === key));
+  errorEl.textContent = result.error ?? '';
+  errorEl.hidden = !result.error;
+  if (result.error) inputs[result.field].focus();
+  return !result.error;
+}
+
+/* ───── 메뉴 추가 ───── */
+$('add-category').append(...CATEGORIES.map(c => el('option', { value: c, text: c })));
+
+$('add').addEventListener('submit', async e => {
+  e.preventDefault();
+  const inputs = { name: $('add-name'), category: $('add-category'), price: $('add-price'), stock: $('add-stock') };
+  const result = check({ name: inputs.name.value, category: inputs.category.value, price: inputs.price.value, stock: inputs.stock.value, stockBad: inputs.stock.validity.badInput });
+  if (!showCheck(result, inputs, $('add-error'))) return;
+
+  const button = $('add-submit');
+  button.disabled = true;
+  button.textContent = '추가하는 중…';
+  const { data, error } = db ? await db.from('menus').insert(result.value).select().single() : { error: new Error('연결 전') };
+  button.disabled = false;
+  button.textContent = '추가';
+  if (error) {
+    console.error(error);
+    $('add-error').textContent = '메뉴를 추가하지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.';
+    $('add-error').hidden = false;
+    return;
+  }
+
+  category = '전체'; query = ''; $('search').value = ''; editingId = null; // 방금 넣은 메뉴가 보이게 걸러 보기를 푼다
+  if ($('list').dataset.loaded) {
+    menus.push(data);
+    sortMenus();
+    render();
+  } else {
+    await load(); // 목록을 한 번도 못 불러온 상태였다면 전체를 다시 받는다
+  }
+  e.target.reset();
+  inputs.name.focus();
+  toast(`${data.name} 메뉴를 추가했어요.`);
+});
+
+/* ───── 재고 − + ───── */
+const sending = new Set();
+
+function bump(id, delta) {
+  const m = menus.find(x => x.id === id);
+  m.stock = Math.min(MAX_STOCK, Math.max(0, m.stock + delta));
+  render(); // 줄 순서는 그대로 둔다. 누르는 도중에 줄이 움직이면 엉뚱한 메뉴를 누르게 된다
+  focusButton(delta > 0 ? 'plus' : 'minus', id);
+  pushStock(m);
+}
+
+// 빠르게 여러 번 눌러도 마지막 숫자가 저장되게, 보내는 중이면 끝난 뒤에 다시 맞춰 본다
+async function pushStock(m) {
+  if (sending.has(m.id)) return;
+  sending.add(m.id);
+  try {
+    let sent;
+    do {
+      sent = m.stock;
+      const { error } = await db.from('menus').update({ stock: sent }).eq('id', m.id);
+      if (error) throw error;
+    } while (m.stock !== sent);
+  } catch (err) {
+    console.error(err);
+    toast('재고를 저장하지 못했어요. 목록을 다시 불러올게요.', true);
+    load();
+  } finally {
+    sending.delete(m.id);
+  }
+}
+
+function focusButton(act, id) {
+  const find = a => $('rows').querySelector(`[data-act="${a}"][data-id="${id}"]:not(:disabled)`);
+  (find(act) ?? find('plus') ?? find('edit'))?.focus();
+}
+
+/* ───── 고치기 ───── */
+function startEdit(id) {
+  editingId = id;
+  render();
+  const price = $('rows').querySelector('.is-editing [data-f="price"]');
+  price.focus();
+  price.select();
+}
+
+function stopEdit(id) {
+  editingId = null;
+  render();
+  focusButton('edit', id);
+}
+
+async function saveEdit(id) {
+  const tr = $('rows').querySelector('.is-editing');
+  const inputs = Object.fromEntries(['name', 'category', 'price', 'stock'].map(f => [f, tr.querySelector(`[data-f="${f}"]`)]));
+  const errorEl = tr.querySelector('.form-error');
+  const result = check({ name: inputs.name.value, category: inputs.category.value, price: inputs.price.value, stock: inputs.stock.value, stockBad: inputs.stock.validity.badInput }, id);
+  if (!showCheck(result, inputs, errorEl)) return;
+
+  const buttons = tr.querySelectorAll('button');
+  buttons.forEach(b => { b.disabled = true; });
+  const { data, error } = await db.from('menus').update(result.value).eq('id', id).select().single();
+  if (error) {
+    console.error(error);
+    buttons.forEach(b => { b.disabled = false; });
+    errorEl.textContent = '저장하지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.';
+    errorEl.hidden = false;
+    return;
+  }
+  Object.assign(menus.find(m => m.id === id), data);
+  sortMenus();
+  stopEdit(id);
+  toast(`${data.name} 메뉴를 고쳤어요.`);
+}
+
+$('rows').addEventListener('click', e => {
+  const button = e.target.closest('[data-act]');
+  if (!button) return;
+  const id = Number(button.dataset.id);
+  const act = button.dataset.act;
+  if (act === 'minus') bump(id, -1);
+  else if (act === 'plus') bump(id, 1);
+  else if (act === 'edit') startEdit(id);
+  else if (act === 'save') saveEdit(id);
+  else if (act === 'cancel') stopEdit(id);
+});
+
+$('rows').addEventListener('keydown', e => {
+  const tr = e.target.closest('.is-editing');
+  if (!tr) return;
+  if (e.key === 'Enter' && e.target.matches('input')) { e.preventDefault(); saveEdit(Number(tr.dataset.id)); }
+  if (e.key === 'Escape') stopEdit(Number(tr.dataset.id));
+});
+
+/* ───── 걸러 보기 ───── */
+$('chips').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  category = chip.textContent;
+  editingId = null;
+  render();
+  [...$('chips').children].find(c => c.textContent === category)?.focus();
+});
+
+$('search').addEventListener('input', e => {
+  query = e.target.value;
+  editingId = null;
+  render();
+});
+
+/* ───── 알림 ───── */
+let toastTimer;
+function toast(text, isError = false) {
+  const box = $('toast');
+  box.textContent = text;
+  box.classList.toggle('is-error', isError);
+  box.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { box.hidden = true; }, isError ? 5000 : 2500);
+}
+
+$('retry').addEventListener('click', () => { window.supabase ? load() : location.reload(); });
+
+load();
+</script>
+</body>
+</html>

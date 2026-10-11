@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>매출 · 골목카페</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css">
+<style>
+/* ===== 공통 시작 — 다섯 페이지가 똑같이 쓴다 (PRD 6장). 고치면 다섯 파일을 모두 고친다. ===== */
+:root {
+  --bg: #FAF7F2;
+  --surface: #FFFFFF;
+  --sidebar: #2B2118;
+  --text: #2B2118;
+  --muted: #76685A;
+  --line: #E8DFD3;
+  --accent: #A85A17;
+  --accent-soft: #F3E4D3;
+  --bar: #B5A38F;
+  --good: #2E7D4F;
+  --warn: #A66300;
+  --bad: #B3261E;
+  --font: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); }
+h1 { margin: 0; font-size: 22px; font-weight: 700; }
+h2 { margin: 0; font-size: 15px; font-weight: 600; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: default; opacity: .5; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.page { padding: 32px; }
+.wrap { max-width: 1120px; }
+.page-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 20px; }
+.page-head p { color: var(--muted); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+.card-label { color: var(--muted); font-size: 13px; }
+.card-value { font-size: 28px; font-weight: 700; line-height: 1.3; }
+.card-sub { color: var(--muted); font-size: 13px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; padding: 9px 16px; border: 1px solid var(--accent); border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.btn-quiet { border-color: var(--line); background: var(--surface); color: var(--text); font-weight: 500; }
+.btn-small { padding: 6px 12px; font-size: 13px; }
+.btn-danger { border-color: var(--bad); background: var(--bad); }
+
+.field { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 13px; }
+.input { min-width: 0; min-height: 40px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 15px; }
+.input::placeholder { color: var(--muted); }
+.input[aria-invalid="true"] { border-color: var(--bad); }
+.form-error { color: var(--bad); font-size: 13px; }
+.chip { padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 13px; }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
+.stepper { display: inline-flex; align-items: center; gap: 6px; }
+.step { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 17px; line-height: 1; }
+
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; background: var(--bg); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.badge::before { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); content: ""; }
+.badge-good::before { background: var(--good); }
+.badge-warn::before { background: var(--warn); }
+.badge-bad { background: color-mix(in srgb, var(--bad) 10%, var(--surface)); color: var(--bad); }
+.badge-bad::before { background: var(--bad); }
+
+.notice { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.notice::before { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--muted); color: #fff; font-size: 13px; font-weight: 700; line-height: 22px; text-align: center; content: "i"; }
+.notice.is-error { border-color: var(--bad); }
+.notice.is-error::before { background: var(--bad); content: "!"; }
+.notice p { flex: 1 1 260px; }
+
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { padding: 10px 8px; border-bottom: 1px solid var(--line); font-weight: 400; text-align: left; }
+.table thead th { color: var(--muted); font-size: 13px; }
+.table .num { font-variant-numeric: tabular-nums; text-align: right; }
+.table tbody tr:last-child > * { border-bottom: 0; }
+.table-wrap { overflow-x: auto; }
+.row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.skeleton span { display: block; height: 20px; border-radius: 6px; background: var(--line); }
+.empty { padding: 32px 16px; color: var(--muted); text-align: center; }
+.muted { color: var(--muted); }
+
+.toast { position: fixed; bottom: 24px; left: 50%; z-index: 10; max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 8px; background: var(--text); color: #fff; font-size: 14px; transform: translateX(-50%); }
+.toast.is-error { background: var(--bad); }
+
+@media (max-width: 760px) { .page { padding: 16px; } }
+/* ===== 공통 끝 ===== */
+
+/* 판매 넣기 */
+.sell { margin-bottom: 16px; }
+.sell h2 { margin-bottom: 12px; }
+.sell-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(120px, auto) auto; align-items: end; gap: 12px 16px; }
+.qty { width: 72px; text-align: center; }
+.sell-amount { display: flex; align-items: center; min-height: 40px; color: var(--text); font-size: 20px; font-weight: 700; }
+.sell-hint { min-height: 1.5em; margin-top: 10px; color: var(--muted); font-size: 13px; }
+.sell .form-error { margin-top: 4px; }
+
+/* 오늘 요약 */
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+
+/* 오늘 판매 목록 */
+.list h2 { margin-bottom: 8px; }
+.table { min-width: 700px; } /* 좁은 화면에서는 표만 옆으로 넘겨 본다. 메뉴 이름 칸이 찌그러지지 않게 넉넉히 둔다 */
+.table th[scope="row"] { font-weight: 600; }
+.table tfoot > tr > * { border-top: 2px solid var(--line); border-bottom: 0; font-weight: 700; }
+.col-time { width: 110px; }
+.col-qty { width: 90px; }
+.col-amount { width: 140px; }
+.col-actions { width: 220px; }
+.list[data-state="loading"][data-loaded] .table-wrap { opacity: .55; }
+
+@media (max-width: 760px) {
+  .sell-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sell-grid > :first-child, .sell-grid > .btn { grid-column: 1 / -1; }
+  .stats { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+</head>
+<body class="page">
+
+<div class="wrap">
+  <header class="page-head">
+    <h1>매출</h1>
+    <p id="today"></p>
+  </header>
+
+  <div class="notice is-error" id="notice" hidden>
+    <p>판매 기록을 불러오지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.</p>
+    <button type="button" class="btn btn-quiet" id="retry">다시 시도</button>
+  </div>
+
+  <div class="notice" id="no-menus" hidden>
+    <p>판매를 넣으려면 먼저 메뉴가 있어야 해요.</p>
+    <a class="btn btn-quiet" href="./#menu" target="_top">메뉴 추가하러 가기</a>
+  </div>
+
+  <form class="card sell" id="sell" novalidate hidden>
+    <h2>판매 넣기</h2>
+    <div class="sell-grid">
+      <label class="field">메뉴
+        <select class="input" id="sell-menu"></select>
+      </label>
+      <div class="field"><span id="qty-label">수량(개)</span>
+        <span class="stepper">
+          <button type="button" class="step" id="qty-minus" aria-label="수량 1개 줄이기">−</button>
+          <input class="input qty" id="sell-qty" type="number" inputmode="numeric" min="1" max="99" step="1" value="1" aria-labelledby="qty-label">
+          <button type="button" class="step" id="qty-plus" aria-label="수량 1개 늘리기">+</button>
+        </span>
+      </div>
+      <div class="field">금액
+        <strong class="sell-amount" id="sell-amount">–</strong>
+      </div>
+      <button class="btn" id="sell-submit">판매 넣기</button>
+    </div>
+    <p class="sell-hint" id="sell-hint"></p>
+    <p class="form-error" id="sell-error" role="alert" hidden></p>
+  </form>
+
+  <div class="stats">
+    <div class="card">
+      <p class="card-label">오늘 매출</p>
+      <p class="card-value" id="v-total">–</p>
+      <p class="card-sub" id="s-total">&nbsp;</p>
+    </div>
+    <div class="card">
+      <p class="card-label">판매 건수</p>
+      <p class="card-value" id="v-count">–</p>
+      <p class="card-sub" id="s-count">&nbsp;</p>
+    </div>
+    <div class="card">
+      <p class="card-label">건당 평균</p>
+      <p class="card-value" id="v-avg">–</p>
+      <p class="card-sub" id="s-avg">&nbsp;</p>
+    </div>
+  </div>
+
+  <section class="card list" id="list" data-state="loading">
+    <h2>오늘 판매 목록</h2>
+    <div class="table-wrap" id="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col" class="col-time">시각</th>
+            <th scope="col">메뉴</th>
+            <th scope="col" class="num col-qty">수량</th>
+            <th scope="col" class="num col-amount">금액</th>
+            <th scope="col" class="col-actions" aria-label="지우기"></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+        <tfoot id="foot" hidden>
+          <tr>
+            <th scope="row" colspan="2">합계</th>
+            <td class="num" id="f-qty"></td>
+            <td class="num" id="f-amount"></td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <p class="empty" id="empty" hidden></p>
+  </section>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* Supabase 연결 — publishable key만 넣는다. */
+const SUPABASE_URL = 'https://ngyqprsdcajizpzoqxip.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_NwDpUc3O_dfJvOt9tA_Dhw_McmOYcMV';
+
+const CATEGORIES = ['커피', '음료', '디저트', '기타'];
+const MAX_QTY = 99;
+
+const $ = id => document.getElementById(id);
+const count = n => n.toLocaleString('ko-KR');
+const won = n => count(Math.round(n)) + '원';
+
+/* 날짜와 시각은 모두 한국 시간 */
+const KST = 9 * 60 * 60 * 1000;
+const kstKey = t => new Date(t + KST).toISOString().slice(0, 10);       // 그 순간의 한국 날짜 '2026-10-11'
+const kstMidnight = key => Date.parse(key + 'T00:00:00Z') - KST;        // 그 날짜가 한국에서 시작하는 순간
+function longDate(key) {
+  const [, m, d] = key.split('-').map(Number);
+  return `${m}월 ${d}일 ${'일월화수목금토'[new Date(key + 'T00:00:00Z').getUTCDay()]}요일`;
+}
+const clock = iso => new Date(iso).toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour: 'numeric', minute: '2-digit' });
+
+let db;
+let menus = [], sales = [];
+let confirmId = null; // "지울까요?"를 묻고 있는 판매 기록
+let busy = false;     // 저장하는 동안 두 번 눌리지 않게 한다
+
+// 글자는 모두 textContent로 넣는다 (메뉴 이름은 사람이 적은 글)
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs)) {
+    if (key === 'text') node.textContent = value;
+    else if (value === true) node.setAttribute(key, '');
+    else if (value !== false && value != null) node.setAttribute(key, value);
+  }
+  node.append(...children);
+  return node;
+}
+
+/* ───── 불러오기: 메뉴와 오늘 판매 기록 ───── */
+async function load() {
+  setState('loading');
+  try {
+    if (!window.supabase) throw new Error('Supabase 연결 도구를 불러오지 못했다');
+    db ??= supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const today = kstKey(Date.now());
+    const since = new Date(kstMidnight(today)).toISOString();
+    const [menuRows, saleRows] = await Promise.all([
+      fetchAll(() => db.from('menus').select('id, name, category, price, stock')),
+      fetchAll(() => db.from('sales').select('id, menu_id, qty, amount, sold_at').gte('sold_at', since)),
+    ]);
+    menus = menuRows.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+    sales = saleRows.sort((a, b) => Date.parse(b.sold_at) - Date.parse(a.sold_at) || b.id - a.id); // 최근 판매가 위
+    confirmId = null;
+    $('today').textContent = longDate(today);
+    $('list').dataset.loaded = 'true';
+    setState('ready');
+    render();
+  } catch (err) {
+    console.error(err);
+    setState('error');
+  }
+}
+
+// Supabase는 한 번에 1,000줄까지만 준다. 끝까지 받아야 합계가 맞는다.
+async function fetchAll(query) {
+  const size = 1000, rows = [];
+  for (let from = 0; ; from += size) {
+    const { data, error } = await query().order('id').range(from, from + size - 1);
+    if (error) throw error;
+    rows.push(...data);
+    if (data.length < size) return rows;
+  }
+}
+
+function setState(state) {
+  const list = $('list');
+  list.dataset.state = state;
+  $('notice').hidden = state !== 'error';
+  if (list.dataset.loaded) return; // 다시 불러올 때는 보던 화면을 그대로 둔다
+  $('empty').hidden = true;
+  $('table-wrap').hidden = state !== 'loading';
+  $('rows').replaceChildren(...(state === 'loading'
+    ? Array.from({ length: 3 }, () => el('tr', { class: 'skeleton' }, el('td', { colspan: 5 }, el('span'))))
+    : []));
+}
+
+/* ───── 그리기 ───── */
+const menuOf = id => menus.find(m => m.id === id);
+const optionText = m => `${m.name} · ${won(m.price)}` + (m.stock == null ? '' : m.stock === 0 ? ' · 품절' : ` · 재고 ${count(m.stock)}개`);
+
+function render() {
+  $('no-menus').hidden = menus.length > 0;
+  $('sell').hidden = menus.length === 0;
+  renderMenuOptions();
+  updatePreview();
+
+  const total = sales.reduce((sum, s) => sum + s.amount, 0);
+  const qty = sales.reduce((sum, s) => sum + s.qty, 0);
+  const best = bestSeller();
+  $('v-total').textContent = won(total);
+  $('s-total').textContent = sales.length ? `마지막 판매 ${clock(sales[0].sold_at)}` : '오늘은 아직 판매가 없어요';
+  $('v-count').textContent = count(sales.length) + '건';
+  $('s-count').textContent = sales.length ? `모두 ${count(qty)}개 팔았어요` : ' ';
+  $('v-avg').textContent = sales.length ? won(total / sales.length) : '–';
+  $('s-avg').textContent = best ? `가장 많이 팔린 메뉴: ${best.name} ${count(best.qty)}개` : ' ';
+
+  $('rows').replaceChildren(...sales.map(saleRow));
+  $('f-qty').textContent = count(qty) + '개';
+  $('f-amount').textContent = won(total);
+  $('foot').hidden = !sales.length;
+  $('table-wrap').hidden = !sales.length;
+  $('empty').hidden = sales.length > 0;
+  $('empty').textContent = menus.length ? '오늘은 아직 판매가 없어요. 위에서 첫 판매를 넣어 보세요.' : '오늘은 아직 판매가 없어요.';
+}
+
+// 메뉴를 분류별로 묶어 보여 준다. 품절 메뉴는 고를 수 없다.
+function renderMenuOptions() {
+  const select = $('sell-menu');
+  const chosen = select.value;
+  const groups = [...new Set([...CATEGORIES, ...menus.map(m => m.category)])]
+    .map(name => [name, menus.filter(m => m.category === name)])
+    .filter(([, list]) => list.length);
+  select.replaceChildren(
+    el('option', { value: '', text: '메뉴를 골라 주세요' }),
+    ...groups.map(([name, list]) => el('optgroup', { label: name },
+      ...list.map(m => el('option', { value: m.id, disabled: m.stock === 0, text: optionText(m) })))));
+  select.value = menus.some(m => String(m.id) === chosen && m.stock !== 0) ? chosen : '';
+}
+
+function bestSeller() {
+  const byMenu = new Map();
+  for (const s of sales) byMenu.set(s.menu_id, (byMenu.get(s.menu_id) ?? 0) + s.qty);
+  const top = [...byMenu].sort((a, b) => b[1] - a[1])[0];
+  return top ? { name: menuOf(top[0])?.name ?? '이름 없는 메뉴', qty: top[1] } : null;
+}
+
+function saleRow(s) {
+  const name = menuOf(s.menu_id)?.name ?? '이름 없는 메뉴';
+  const actions = s.id === confirmId
+    ? [el('span', { class: 'muted', text: '지울까요?' }),
+       el('button', { type: 'button', class: 'btn btn-danger btn-small', 'data-act': 'delete', 'data-id': s.id, text: '지우기' }),
+       el('button', { type: 'button', class: 'btn btn-quiet btn-small', 'data-act': 'keep', 'data-id': s.id, text: '취소' })]
+    : [el('button', { type: 'button', class: 'btn btn-quiet btn-small', 'data-act': 'ask', 'data-id': s.id, 'aria-label': `${clock(s.sold_at)} ${name} 판매 기록 지우기`, text: '지우기' })];
+  return el('tr', {},
+    el('td', { class: 'muted', text: clock(s.sold_at) }),
+    el('th', { scope: 'row', text: name }),
+    el('td', { class: 'num', text: count(s.qty) + '개' }),
+    el('td', { class: 'num', text: won(s.amount) }),
+    el('td', {}, el('span', { class: 'row-actions' }, ...actions)));
+}
+
+/* ───── 판매 넣기 ───── */
+const selectedMenu = () => menuOf(Number($('sell-menu').value));
+const maxQty = m => m?.stock != null ? Math.min(MAX_QTY, m.stock) : MAX_QTY;
+function readQty() {
+  const n = Number($('sell-qty').value);
+  return $('sell-qty').value.trim() !== '' && Number.isInteger(n) && n >= 1 ? n : null;
+}
+
+// 고른 메뉴와 수량에 맞춰 금액과 남은 재고를 미리 보여 준다
+function updatePreview() {
+  const m = selectedMenu(), qty = readQty();
+  $('sell-amount').textContent = m && qty ? won(m.price * qty) : '–';
+  $('sell-hint').textContent = !m ? '' : m.stock == null ? '재고를 세지 않는 메뉴예요.'
+    : qty && qty <= m.stock ? `남은 재고 ${count(m.stock)}개 · 판매하면 ${count(m.stock - qty)}개가 남아요.`
+    : `남은 재고 ${count(m.stock)}개`;
+  $('qty-minus').disabled = !(qty > 1);
+  $('qty-plus').disabled = qty != null && qty >= maxQty(m);
+}
+
+function showProblem(input, text) {
+  for (const field of [$('sell-menu'), $('sell-qty')]) field.setAttribute('aria-invalid', String(field === input));
+  $('sell-error').textContent = text ?? '';
+  $('sell-error').hidden = !text;
+  input?.focus();
+}
+
+$('sell-menu').addEventListener('change', () => { showProblem(null); updatePreview(); });
+$('sell-qty').addEventListener('input', updatePreview);
+$('qty-minus').addEventListener('click', () => stepQty(-1));
+$('qty-plus').addEventListener('click', () => stepQty(1));
+
+function stepQty(delta) {
+  $('sell-qty').value = Math.min(maxQty(selectedMenu()), Math.max(1, (readQty() ?? 1) + delta));
+  updatePreview();
+}
+
+$('sell').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (busy) return;
+  const m = selectedMenu(), qty = readQty();
+  if (!m) return showProblem($('sell-menu'), '메뉴를 골라 주세요.');
+  if (!qty || qty > MAX_QTY) return showProblem($('sell-qty'), `수량은 1개부터 ${MAX_QTY}개까지 숫자로 적어 주세요.`);
+  if (m.stock != null && qty > m.stock) return showProblem($('sell-qty'), `${m.name} 재고가 ${count(m.stock)}개 남았어요. 수량을 줄여 주세요.`);
+  showProblem(null);
+
+  const button = $('sell-submit');
+  busy = true;
+  button.disabled = true;
+  button.textContent = '넣는 중…';
+  // 금액 계산과 재고 줄이기는 데이터베이스가 한 번에 한다 (CLAUDE.md "Supabase")
+  const { data, error } = await db.from('sales').insert({ menu_id: m.id, qty }).select('id, amount').single();
+  busy = false;
+  button.disabled = false;
+  button.textContent = '판매 넣기';
+
+  if (error) {
+    console.error(error);
+    const outOfStock = error.code === 'CF001'; // 그 사이 다른 곳에서 재고가 줄었다
+    showProblem($('sell-qty'), outOfStock ? error.message : '판매를 넣지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.');
+    if (outOfStock) load();
+    return;
+  }
+  $('sell-qty').value = 1;
+  await load();
+  toast(`${m.name} ${count(qty)}개 판매를 넣었어요. (${won(data.amount)})`);
+});
+
+/* ───── 판매 기록 지우기 (지우기 전에 한 번 묻는다) ───── */
+$('rows').addEventListener('click', e => {
+  const button = e.target.closest('[data-act]');
+  if (!button || busy) return;
+  const id = Number(button.dataset.id);
+  const act = button.dataset.act;
+  if (act === 'delete') return removeSale(id);
+  confirmId = act === 'ask' ? id : null;
+  render();
+  $('rows').querySelector(`[data-act="${act === 'ask' ? 'delete' : 'ask'}"][data-id="${id}"]`)?.focus();
+});
+
+async function removeSale(id) {
+  const s = sales.find(x => x.id === id);
+  const m = menuOf(s.menu_id);
+  busy = true;
+  $('rows').querySelectorAll('button').forEach(b => { b.disabled = true; });
+  const { error } = await db.from('sales').delete().eq('id', id);
+  busy = false;
+  if (error) {
+    console.error(error);
+    confirmId = null;
+    render();
+    toast('판매 기록을 지우지 못했어요. 다시 시도해 주세요.', true);
+    return;
+  }
+  await load();
+  toast(m?.stock != null ? `판매 기록을 지웠어요. ${m.name} 재고 ${count(s.qty)}개를 되돌렸어요.` : '판매 기록을 지웠어요.');
+}
+
+/* ───── 알림 ───── */
+let toastTimer;
+function toast(text, isError = false) {
+  const box = $('toast');
+  box.textContent = text;
+  box.classList.toggle('is-error', isError);
+  box.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { box.hidden = true; }, isError ? 5000 : 2500);
+}
+
+$('retry').addEventListener('click', () => { window.supabase ? load() : location.reload(); });
+
+load();
+</script>
+</body>
+</html>

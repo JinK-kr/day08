@@ -28,11 +28,63 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 var(
 h1 { margin: 0; font-size: 22px; font-weight: 700; }
 h2 { margin: 0; font-size: 15px; font-weight: 600; }
 p { margin: 0; }
-button { font: inherit; color: inherit; cursor: pointer; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: default; opacity: .5; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.page { padding: 32px; }
+.wrap { max-width: 1120px; }
+.page-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 20px; }
+.page-head p { color: var(--muted); }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
-.btn { display: inline-flex; align-items: center; justify-content: center; padding: 9px 16px; border: 1px solid var(--accent); border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; text-decoration: none; }
+.card-label { color: var(--muted); font-size: 13px; }
+.card-value { font-size: 28px; font-weight: 700; line-height: 1.3; }
+.card-sub { color: var(--muted); font-size: 13px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; padding: 9px 16px; border: 1px solid var(--accent); border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; text-decoration: none; white-space: nowrap; }
 .btn-quiet { border-color: var(--line); background: var(--surface); color: var(--text); font-weight: 500; }
+.btn-small { padding: 6px 12px; font-size: 13px; }
+.btn-danger { border-color: var(--bad); background: var(--bad); }
+
+.field { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 13px; }
+.input { min-width: 0; min-height: 40px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 15px; }
+.input::placeholder { color: var(--muted); }
+.input[aria-invalid="true"] { border-color: var(--bad); }
+.form-error { color: var(--bad); font-size: 13px; }
+.chip { padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 13px; }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
+.stepper { display: inline-flex; align-items: center; gap: 6px; }
+.step { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 17px; line-height: 1; }
+
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; background: var(--bg); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.badge::before { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); content: ""; }
+.badge-good::before { background: var(--good); }
+.badge-warn::before { background: var(--warn); }
+.badge-bad { background: color-mix(in srgb, var(--bad) 10%, var(--surface)); color: var(--bad); }
+.badge-bad::before { background: var(--bad); }
+
+.notice { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.notice::before { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--muted); color: #fff; font-size: 13px; font-weight: 700; line-height: 22px; text-align: center; content: "i"; }
+.notice.is-error { border-color: var(--bad); }
+.notice.is-error::before { background: var(--bad); content: "!"; }
+.notice p { flex: 1 1 260px; }
+
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { padding: 10px 8px; border-bottom: 1px solid var(--line); font-weight: 400; text-align: left; }
+.table thead th { color: var(--muted); font-size: 13px; }
+.table .num { font-variant-numeric: tabular-nums; text-align: right; }
+.table tbody tr:last-child > * { border-bottom: 0; }
+.table-wrap { overflow-x: auto; }
+.row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.skeleton span { display: block; height: 20px; border-radius: 6px; background: var(--line); }
+.empty { padding: 32px 16px; color: var(--muted); text-align: center; }
+.muted { color: var(--muted); }
+
+.toast { position: fixed; bottom: 24px; left: 50%; z-index: 10; max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 8px; background: var(--text); color: #fff; font-size: 14px; transform: translateX(-50%); }
+.toast.is-error { background: var(--bad); }
+
+@media (max-width: 760px) { .page { padding: 16px; } }
 /* ===== 공통 끝 ===== */
 
 /* 틀: 왼쪽 메뉴 + 가운데 화면 */
@@ -55,33 +107,21 @@ iframe.view { display: block; width: 100%; border: 0; }
 .soon p { margin: 8px 0 24px; color: var(--muted); }
 
 /* 홈 */
-.home { padding: 32px; container-type: inline-size; }
-.wrap { max-width: 1120px; }
-.page-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 20px; }
-.page-head p { color: var(--muted); }
-
-.notice { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
-.notice::before { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--muted); color: #fff; font-size: 13px; font-weight: 700; line-height: 22px; text-align: center; content: "i"; }
-.home[data-state="error"] .notice { border-color: var(--bad); }
-.home[data-state="error"] .notice::before { background: var(--bad); content: "!"; }
-.notice p { flex: 1 1 260px; }
+.home { container-type: inline-size; }
 
 .cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
 @container (max-width: 900px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @container (max-width: 440px) { .cards { grid-template-columns: minmax(0, 1fr); } }
 a.card { display: flex; flex-direction: column; gap: 2px; color: inherit; text-decoration: none; }
 a.card:hover { border-color: var(--bar); }
-.card-label { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; }
-.card-label::after { content: "›"; font-size: 15px; line-height: 1.2; }
-.card-value { font-size: 28px; font-weight: 700; line-height: 1.3; }
-.card-sub { color: var(--muted); font-size: 13px; }
+a.card .card-label { display: flex; justify-content: space-between; }
+a.card .card-label::after { content: "›"; font-size: 15px; line-height: 1.2; }
 .card-sub[data-tone="good"] { color: var(--good); }
 .card-sub[data-tone="bad"] { color: var(--bad); }
 
 .chart-card { margin: 0; }
 .chart-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .chart-head p { color: var(--muted); font-size: 13px; }
-.chart-head .btn { padding: 6px 12px; font-size: 13px; }
 .chart { position: relative; }
 .plot { height: 260px; }
 .plot svg { display: block; }
@@ -101,11 +141,7 @@ a.card:hover { border-color: var(--bar); }
 .tip { position: absolute; z-index: 1; padding: 8px 12px; border-radius: 8px; background: var(--text); color: #D9CCBD; font-size: 13px; line-height: 1.4; white-space: nowrap; pointer-events: none; transform: translate(-50%, -100%); }
 .tip strong { display: block; color: #fff; font-size: 15px; }
 
-.table { width: 100%; border-collapse: collapse; }
-.table th, .table td { padding: 10px 8px; border-bottom: 1px solid var(--line); font-weight: 400; font-variant-numeric: tabular-nums; text-align: right; }
-.table th:first-child { text-align: left; }
-.table thead th { color: var(--muted); font-size: 13px; }
-.table tbody tr:last-child > * { border-bottom: 0; font-weight: 600; }
+#table tbody tr:last-child > * { font-weight: 600; } /* 맨 아래가 오늘 */
 
 /* 불러오는 중: 처음에는 회색 칸, 다시 불러올 때는 보던 숫자를 흐리게 둔다 */
 .home[data-state="loading"]:not([data-loaded]) :is(.card-value, .card-sub) { border-radius: 6px; background: var(--line); color: transparent; }
@@ -119,7 +155,6 @@ a.card:hover { border-color: var(--bar); }
   .brand { padding: 0 4px; font-size: 17px; white-space: nowrap; }
   .brand small { display: none; }
   .nav { flex-direction: row; }
-  .home { padding: 16px; }
 }
 </style>
 </head>
@@ -137,7 +172,7 @@ a.card:hover { border-color: var(--bar); }
 </aside>
 
 <main>
-  <section class="view home" id="home" data-state="loading">
+  <section class="view home page" id="home" data-state="loading">
     <div class="wrap">
       <header class="page-head">
         <h1>홈</h1>
@@ -178,7 +213,7 @@ a.card:hover { border-color: var(--bar); }
             <h2>최근 7일 매출</h2>
             <p>하루 매출 · 막대를 누르면 금액이 보여요</p>
           </div>
-          <button type="button" class="btn btn-quiet" id="toggle" aria-pressed="false" hidden>표로 보기</button>
+          <button type="button" class="btn btn-quiet btn-small" id="toggle" aria-pressed="false" hidden>표로 보기</button>
         </figcaption>
         <div class="chart" id="chart">
           <div class="plot" id="plot"></div>
@@ -186,7 +221,7 @@ a.card:hover { border-color: var(--bar); }
           <div class="tip" id="tip" hidden><strong id="tip-value"></strong><span id="tip-label"></span></div>
         </div>
         <table class="table" id="table" hidden>
-          <thead><tr><th scope="col">날짜</th><th scope="col">매출</th><th scope="col">판매 건수</th></tr></thead>
+          <thead><tr><th scope="col">날짜</th><th scope="col" class="num">매출</th><th scope="col" class="num">판매 건수</th></tr></thead>
           <tbody id="table-body"></tbody>
         </table>
       </figure>
@@ -207,9 +242,9 @@ a.card:hover { border-color: var(--bar); }
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* Supabase 연결 — STEPS.md 0단계에서 채운다. publishable key만 넣는다. */
-const SUPABASE_URL = '';
-const SUPABASE_KEY = '';
+/* Supabase 연결 — publishable key만 넣는다. */
+const SUPABASE_URL = 'https://ngyqprsdcajizpzoqxip.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_NwDpUc3O_dfJvOt9tA_Dhw_McmOYcMV';
 
 const $ = id => document.getElementById(id);
 
@@ -286,11 +321,13 @@ const NOTICE = {
   setup: '아직 가게 숫자를 연결하지 않았어요. Supabase 준비(STEPS.md 0단계)를 마치면 여기에 오늘 숫자가 나와요.',
   error: '숫자를 불러오지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.',
 };
+const LOW_STOCK = 5; // 재고가 이 개수 이하면 "재고 부족" (PRD 8장)
 let db, homeTurn = 0, stats = null;
 
 function setHome(state) {
   views.home.dataset.state = state;
   $('notice').hidden = !Object.hasOwn(NOTICE, state);
+  $('notice').classList.toggle('is-error', state === 'error');
   $('notice-text').textContent = NOTICE[state] ?? '';
   $('retry').hidden = state !== 'error';
   if (!stats) chartNote(state === 'loading' ? '' : '숫자를 불러오면 여기에 그래프가 그려져요.');
@@ -309,7 +346,7 @@ async function loadHome() {
     const since = new Date(kstMidnight(lastDays(7, now)[0])).toISOString();
     const [sales, menus, reviews] = await Promise.all([
       fetchAll(() => db.from('sales').select('id, sold_at, amount').gte('sold_at', since)),
-      fetchAll(() => db.from('menu_items').select('id, name, stock, low_stock').eq('is_hidden', false).not('stock', 'is', null)),
+      fetchAll(() => db.from('menus').select('id, name, stock').not('stock', 'is', null)),
       fetchAll(() => db.from('reviews').select('id, rating, reply')),
     ]);
     if (turn !== homeTurn) return;
@@ -345,7 +382,7 @@ function summarize(sales, menus, reviews, now) {
     day.count += 1;
     if (day.key === yesterday && t <= now - DAY) yesterdaySoFar += s.amount;
   }
-  const low = menus.filter(m => m.stock != null && m.stock <= m.low_stock).sort((a, b) => a.stock - b.stock);
+  const low = menus.filter(m => m.stock != null && m.stock <= LOW_STOCK).sort((a, b) => a.stock - b.stock);
   const rated = reviews.reduce((sum, r) => sum + r.rating, 0);
   return {
     days, yesterdaySoFar, low,
@@ -481,7 +518,7 @@ function fillTable() {
     day.scope = 'row';
     day.textContent = longDate(d.key) + (i === stats.days.length - 1 ? ' (오늘)' : '');
     tr.append(day);
-    for (const text of [won(d.total), count(d.count) + '건']) tr.insertCell().textContent = text;
+    for (const text of [won(d.total), count(d.count) + '건']) Object.assign(tr.insertCell(), { className: 'num', textContent: text });
     return tr;
   }));
 }
