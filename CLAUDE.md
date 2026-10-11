@@ -59,7 +59,8 @@ for f in *.html; do printf '%s  ' "$f"; sed -n '/공통 시작/,/공통 끝/p' "
 - 프로젝트는 `myproject`(ref `ngyqprsdcajizpzoqxip`)다. 테이블은 `menus`, `sales`, `reviews` 3개이고, 같은 프로젝트의 `guestbook`은 다른 실습 것이므로 건드리지 않는다.
 - 무료 프로젝트라 한동안 안 쓰면 일시정지된다. 다시 켠 뒤에는 상태가 `ACTIVE_HEALTHY`가 될 때까지 기다렸다가 작업한다. `COMING_UP` 중에도 SQL은 실행되지만, 그때 만든 것은 백업 복원이 끝나면서 사라진다.
 - 로그인 없이(anon) 허용한 동작은 PRD 10장 표가 전부다. 표에 없는 동작(메뉴 삭제, 판매 기록 수정, 리뷰 삭제)이 필요하면 페이지보다 정책을 먼저 추가한다.
-- 판매와 재고 규칙은 트리거 함수 `sales_apply`(추가 전)와 `sales_undo`(삭제 후)에 있다. 연습용 판매 기록을 SQL로 한꺼번에 넣을 때도 이 트리거가 돌아서, 재고가 모자란 메뉴는 들어가지 않는다.
+- 판매와 재고 규칙은 트리거 함수 `sales_apply`(추가 전)와 `sales_undo`(삭제 후)에 있다.
+- 지난 날짜의 판매 기록을 SQL로 한꺼번에 넣을 때는 `sales_apply`가 지금 재고를 줄이거나 재고 부족으로 거절한다. 그래서 연습용 데이터는 `do $$ … $$` 한 덩어리 안에서 트리거를 끄고(`alter table public.sales disable trigger sales_apply`), 금액을 가격 × 수량으로 직접 넣고, 다시 켰다. 한 덩어리로 실행해야 도중에 실패해도 트리거가 꺼진 채 남지 않는다.
 
 ## AI
 

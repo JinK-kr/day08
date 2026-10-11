@@ -191,19 +191,19 @@ a.card .card-label::after { content: "›"; font-size: 15px; line-height: 1.2; }
           <span class="card-sub" id="s-sales">&nbsp;</span>
         </a>
         <a class="card" href="#sales">
-          <span class="card-label">오늘 판매 건수</span>
+          <span class="card-label">오늘 주문 수</span>
           <strong class="card-value" id="v-count">–</strong>
           <span class="card-sub" id="s-count">&nbsp;</span>
         </a>
+        <a class="card" href="#reviews">
+          <span class="card-label">평균 별점</span>
+          <strong class="card-value" id="v-rating">–</strong>
+          <span class="card-sub" id="s-rating">&nbsp;</span>
+        </a>
         <a class="card" href="#menu">
-          <span class="card-label">재고 부족</span>
+          <span class="card-label">재고 부족 메뉴</span>
           <strong class="card-value" id="v-stock">–</strong>
           <span class="card-sub" id="s-stock">&nbsp;</span>
-        </a>
-        <a class="card" href="#reviews">
-          <span class="card-label">답글 기다리는 리뷰</span>
-          <strong class="card-value" id="v-reviews">–</strong>
-          <span class="card-sub" id="s-reviews">&nbsp;</span>
         </a>
       </div>
 
@@ -221,7 +221,7 @@ a.card .card-label::after { content: "›"; font-size: 15px; line-height: 1.2; }
           <div class="tip" id="tip" hidden><strong id="tip-value"></strong><span id="tip-label"></span></div>
         </div>
         <table class="table" id="table" hidden>
-          <thead><tr><th scope="col">날짜</th><th scope="col" class="num">매출</th><th scope="col" class="num">판매 건수</th></tr></thead>
+          <thead><tr><th scope="col">날짜</th><th scope="col" class="num">매출</th><th scope="col" class="num">주문 수</th></tr></thead>
           <tbody id="table-body"></tbody>
         </table>
       </figure>
@@ -401,14 +401,15 @@ function renderHome(next) {
   $('s-sales').textContent = change.text;
   $('s-sales').dataset.tone = change.tone ?? '';
 
+  // 주문 수 = 오늘 들어온 판매 기록의 줄 수
   $('v-count').textContent = count(today.count) + '건';
-  $('s-count').textContent = today.count ? `건당 평균 ${won(today.total / today.count)}` : '오늘은 아직 판매가 없어요';
+  $('s-count').textContent = today.count ? `한 건에 평균 ${won(today.total / today.count)}` : '오늘은 아직 주문이 없어요';
+
+  $('v-rating').textContent = stats.reviews.total ? stats.reviews.avg.toFixed(1) + '점' : '–';
+  $('s-rating').textContent = stats.reviews.total ? `리뷰 ${count(stats.reviews.total)}개 · 답글 기다리는 리뷰 ${count(stats.reviews.waiting)}개` : '아직 리뷰가 없어요';
 
   $('v-stock').textContent = count(stats.low.length) + '개';
   $('s-stock').textContent = stats.low.length ? `가장 적게 남은 메뉴: ${stats.low[0].name} (${stats.low[0].stock}개)` : '부족한 메뉴가 없어요';
-
-  $('v-reviews').textContent = count(stats.reviews.waiting) + '개';
-  $('s-reviews').textContent = stats.reviews.total ? `평균 별점 ${stats.reviews.avg.toFixed(1)}점 · 리뷰 ${count(stats.reviews.total)}개` : '아직 리뷰가 없어요';
 
   $('toggle').hidden = false;
   fillTable();
@@ -459,7 +460,7 @@ function drawChart() {
     const isToday = i === todayAt;
     // 금액은 오늘과 가장 많이 판 날에만 적는다. 좁은 화면에서 둘이 붙어 있으면 오늘만 적는다.
     const labeled = isToday || (i === bestAt && !(slotW < 60 && bestAt === todayAt - 1));
-    svg += `<g class="slot" tabindex="0" role="img" data-i="${i}" aria-label="${longDate(d.key)}, 매출 ${won(d.total)}, 판매 ${count(d.count)}건">`
+    svg += `<g class="slot" tabindex="0" role="img" data-i="${i}" aria-label="${longDate(d.key)}, 매출 ${won(d.total)}, 주문 ${count(d.count)}건">`
          + `<rect class="wash" x="${cx - slotW / 2 + 2}" y="2" width="${slotW - 4}" height="${H - 4}" rx="6"/>`
          + (d.total ? `<path class="bar${isToday ? ' is-today' : ''}" d="${barPath(cx - barW / 2, barY, barW, baseY - barY)}"/>` : '')
          + (labeled ? `<text class="value" x="${cx}" y="${barY - 8}" text-anchor="middle">${fmt(d.total)}</text>` : '')
@@ -493,7 +494,7 @@ function chartNote(text) {
 function showTip(i) {
   const d = stats.days[i], tip = $('tip');
   $('tip-value').textContent = won(d.total);
-  $('tip-label').textContent = `${longDate(d.key)} · 판매 ${count(d.count)}건`;
+  $('tip-label').textContent = `${longDate(d.key)} · 주문 ${count(d.count)}건`;
   tip.hidden = false;
   const half = tip.offsetWidth / 2;
   tip.style.left = Math.min(Math.max(bars[i].cx, half), plot.clientWidth - half) + 'px';
